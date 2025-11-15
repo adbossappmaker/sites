@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Code Runner + GitHub Deploy</title>
+<style>
+    body {
+        margin: 0;
+        background: #0d1117;
+        color: white;
+        font-family: Arial;
+    }
+    header {
+        padding: 15px;
+        background: #161b22;
+        font-size: 22px;
+        text-align: center;
+        font-weight: bold;
+        border-bottom: 1px solid #30363d;
+    }
+    #container {
+        display: flex;
+        height: calc(100vh - 60px);
+    }
+    #editor {
+        width: 50%;
+        padding: 10px;
+        background: #0d1117;
+        border-right: 1px solid #30363d;
+    }
+    #editor textarea {
+        width: 100%;
+        height: 80%;
+        background: #0d1117;
+        color: #fff;
+        border: 1px solid #30363d;
+        padding: 10px;
+        font-size: 15px;
+        border-radius: 6px;
+    }
+    #preview {
+        width: 50%;
+        background: white;
+    }
+    iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        background: white;
+    }
+    .btn {
+        padding: 12px 20px;
+        background: #238636;
+        border: none;
+        border-radius: 6px;
+        color: white;
+        cursor: pointer;
+        margin-top: 10px;
+        font-size: 16px;
+        font-weight: bold;
+        transition: .2s;
+    }
+    .btn:hover { background: #2ea043; }
+
+    .deploy-btn {
+        background: #3969ff;
+    }
+    .deploy-btn:hover { background: #557dff; }
+
+    #log {
+        margin-top: 15px;
+        padding: 10px;
+        background: #161b22;
+        border-radius: 6px;
+        border: 1px solid #30363d;
+        min-height: 60px;
+        font-size: 14px;
+    }
+</style>
+</head>
+<body>
+
+<header>🔥 HTML Code Runner + GitHub Deploy</header>
+
+<div id="container">
+
+    <div id="editor">
+        <textarea id="code">
+<!DOCTYPE html>
+<html>
+<head>
+<title>My Page</title>
+</head>
+<body>
+<h1>Hello!</h1>
+<p>This page was deployed via AI.</p>
+</body>
+</html>
+        </textarea>
+
+        <button class="btn" onclick="runCode()">▶ Run</button>
+        <button class="btn deploy-btn" onclick="deploy()">🚀 Deploy to GitHub</button>
+
+        <div id="log">Status: Ready</div>
+    </div>
+
+    <div id="preview">
+        <iframe id="output"></iframe>
+    </div>
+
+</div>
+
+<script>
+function runCode() {
+    const code = document.getElementById("code").value;
+    const iframe = document.getElementById("output").contentWindow;
+    iframe.document.open();
+    iframe.document.write(code);
+    iframe.document.close();
+    document.getElementById("log").innerHTML = "Preview updated ✔";
+}
+
+async function deploy() {
+    const username = prompt("Your Name (folder name होगा):");
+    if (!username) return alert("Name required!");
+
+    const fileContent = document.getElementById("code").value;
+
+    document.getElementById("log").innerHTML = "🚀 Deploying...";
+
+    const base64Content = btoa(unescape(encodeURIComponent(fileContent)));
+
+    const org = "adbossappmaker";
+    const repo = "sites";
+    const branch = "main";
+    const path = username + "/index.html";
+
+    const token = "YOUR_GITHUB_PAT_HERE";  // ← नया token यहाँ डालें
+
+    // SHA check (update existing file)
+    let sha = null;
+    const apiURL = `https://api.github.com/repos/${org}/${repo}/contents/${path}`;
+
+    const check = await fetch(apiURL, {
+        headers: { Authorization: `Bearer ${token}` }
+    });
+
+    if (check.status === 200) {
+        const data = await check.json();
+        sha = data.sha;
+    }
+
+    const body = {
+        message: "User deploy: " + username,
+        content: base64Content,
+        branch: branch
+    };
+
+    if (sha) body.sha = sha;
+
+    const upload = await fetch(apiURL, {
+        method: "PUT",
+        headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(body)
+    });
+
+    const result = await upload.json();
+
+    if (upload.status === 201 || upload.status === 200) {
+        document.getElementById("log").innerHTML =
+            `✔ Deployed! Live URL:<br>
+             https://adbossappmaker.github.io/sites/${username}/`;
+    } else {
+        document.getElementById("log").innerHTML =
+            "❌ Error: " + JSON.stringify(result);
+    }
+}
+</script>
+
+</body>
+</html>
