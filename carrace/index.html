@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>carrace</title>
+  <style>
+    body {
+  font-family: sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f9f9f9;
+  color: #333;
+  line-height: 1.6;
+}
+
+.hero {
+  background-color: #2E3192;
+  color: white;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.hero p {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+}
+
+.cta-button {
+  background-color: #6639A6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  text-decoration: none;
+  font-size: 1rem;
+  transition: background-color 0.3s;
+}
+
+.cta-button:hover {
+  background-color: #522d83;
+}
+
+.about-us {
+  padding: 4rem 2rem;
+  text-align: center;
+  background-color: #fff;
+}
+
+.about-us h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #2E3192;
+}
+
+    
+    .bishnoi-deployer-watermark {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 5px;
+      text-decoration: none;
+      z-index: 1000;
+      transition: background-color 0.3s;
+    }
+    .bishnoi-deployer-watermark:hover {
+      background-color: rgba(0, 0, 0, 0.9);
+    }
+  
+  </style>
+</head>
+<body>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Street Racer</title>
+    <!-- Tailwind CSS CDN for modern utility classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom Styles for Neon Theme */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #1a1a2e; /* Deep purple/dark background */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            flex-direction: column;
+        }
+
+        .game-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px; /* Standard road width */
+            height: 90vh;
+            max-height: 700px;
+            background-color: #0d0016; /* Darker road background */
+            border: 4px solid #4a00e0; /* Neon border */
+            box-shadow: 0 0 20px rgba(74, 0, 224, 0.8), 0 0 50px rgba(130, 71, 255, 0.5); /* Glowing effect */
+            overflow: hidden;
+            border-radius: 12px;
+            touch-action: none; /* For better touch handling */
+        }
+
+        .road {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Road Lines (Central Divider) */
+        .line {
+            position: absolute;
+            width: 8px;
+            height: 100px;
+            background-color: #ffcc00; /* Neon Yellow */
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 0 10px #ffcc00;
+            border-radius: 4px;
+        }
+
+        /* Player Car Styling */
+        .player-car {
+            position: absolute;
+            bottom: 50px;
+            width: 60px;
+            height: 100px;
+            background-color: #00ff99; /* Neon Green */
+            left: 50%;
+            transform: translateX(-50%);
+            border-radius: 8px 8px 30px 30px;
+            border: 3px solid #000;
+            box-shadow: 0 0 20px #00ff99, inset 0 0 10px #ffffff;
+            z-index: 10;
+            transition: left 0.1s linear; /* Smooth movement */
+        }
+        .player-car::before, .player-car::after {
+            content: '';
+            position: absolute;
+            width: 8px;
+            height: 8px;
+            background-color: #ff00ff; /* Neon Pink/Magenta for lights */
+            border-radius: 50%;
+            top: 5px;
+            box-shadow: 0 0 5px #ff00ff;
+        }
+        .player-car::before { left: 5px; }
+        .player-car::after { right: 5px; }
+
+        /* Enemy Car Styling */
+        .enemy-car {
+            position: absolute;
+            width: 60px;
+            height: 100px;
+            background-color: #ff3366; /* Neon Red/Pink for enemies */
+            border-radius: 8px 8px 30px 30px;
+            border: 3px solid #000;
+            box-shadow: 0 0 20px #ff3366, inset 0 0 10px #ffffff;
+            z-index: 5;
+        }
+
+        /* Start/Game Over Screen */
+        .ui-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.85);
+            color: #ffcc00;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            z-index: 20;
+            border-radius: 12px;
+            backdrop-filter: blur(5px);
+        }
+
+        .ui-screen h1 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px #00ff99, 0 0 20px #00ff99;
+        }
+
+        .ui-screen p {
+            margin-bottom: 30px;
+            font-size: 1.1rem;
+            color: #00ff99;
+        }
+
+        .ui-screen button {
+            background-color: #ff00ff; /* Neon Magenta button */
+            color: #fff;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.2rem;
+            cursor: pointer;
+            box-shadow: 0 0 15px #ff00ff;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .ui-screen button:hover {
+            background-color: #e600e6;
+            transform: scale(1.05);
+        }
+        
+        /* Score Display (Heads-Up Display) */
+        .hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: #ffcc00; /* Neon Yellow HUD text */
+            font-weight: bold;
+            font-size: 1.1rem;
+            text-shadow: 0 0 8px #ffcc00;
+            z-index: 15;
+        }
+        .score-value {
+            color: #00ff99; /* Neon Green score value */
+            font-size: 1.2em;
+        }
+
+        /* Responsive design for smaller screens */
+        @media (max-width: 450px) {
+            .game-container {
+                height: 100vh;
+                max-width: 100%;
+                border-radius: 0;
+            }
+            .player-car, .enemy-car {
+                width: 50px;
+                height: 80px;
+                bottom: 30px;
+            }
+            .ui-screen h1 {
+                font-size: 2rem;
+            }
+            .ui-screen button {
+                padding: 12px 25px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container" id="gameContainer">
+        <div class="hud" id="hud">
+            <div>SCORE: <span id="scoreValue" class="score-value">0</span></div>
+            <div>HI-SCORE: <span id="highScoreValue" class="score-value">0</span></div>
+        </div>
+
+        <div class="road" id="road">
+            <!-- Road Lines will be injected here by JavaScript -->
+        </div>
+        
+        <div class="player-car" id="playerCar"></div>
+
+        <!-- Start Screen -->
+        <div class="ui-screen" id="startScreen">
+            <h1 class="animate-pulse">NEON STREET RACER</h1>
+            <p>
+                गाड़ी को नियंत्रित करने के लिए **बाएँ/दाएँ ऐरो की** (Arrow Keys) का उपयोग करें। <br>
+                दूसरी कारों से टकराने से बचें और ज़्यादा से ज़्यादा स्कोर करें!
+            </p>
+            <button onclick="startGame()">Start Race</button>
+            <div id="startMessage" class="mt-8 text-sm text-gray-300"></div>
+        </div>
+
+        <!-- Game Over Screen (Hidden initially) -->
+        <div class="ui-screen hidden" id="gameOverScreen">
+            <h1>GAME OVER!</h1>
+            <p>
+                आपका स्कोर: <span id="finalScore" class="score-value">0</span><br>
+                नया हाई स्कोर: <span id="newHighScore" class="score-value">0</span>
+            </p>
+            <button onclick="startGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Global Constants and Variables
+        const GAME_WIDTH = 400; // Reference width for calculations
+        const CAR_WIDTH = 60;
+        const CAR_HEIGHT = 100;
+        const LINE_HEIGHT = 100;
+        const LINE_GAP = 150;
+        const GAME_SPEED_BASE = 5; // Base speed (pixels per frame)
+
+        const container = document.getElementById('gameContainer');
+        const road = document.getElementById('road');
+        const playerCar = document.getElementById('playerCar');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const scoreValueDisplay = document.getElementById('scoreValue');
+        const highScoreValueDisplay = document.getElementById('highScoreValue');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const newHighScoreDisplay = document.getElementById('newHighScore');
+        
+        let animationFrameId;
+        let isPlaying = false;
+        let currentSpeed = GAME_SPEED_BASE;
+        let score = 0;
+        let highScore = parseInt(localStorage.getItem('neonRacerHighScore') || 0);
+        let playerX = 0; // Relative X position of the player car (0 to GAME_WIDTH)
+        let keys = { ArrowLeft: false, ArrowRight: false };
+
+        // --- Utility Functions ---
+
+        // Helper to get actual calculated road dimensions
+        function getRoadDimensions() {
+            return {
+                width: container.clientWidth,
+                height: container.clientHeight
+            };
+        }
+
+        // Initialize car positions
+        function initPositions() {
+            const { width } = getRoadDimensions();
+            playerCar.style.left = `${(width / 2) - (CAR_WIDTH / 2)}px`;
+            playerX = (width / 2) - (CAR_WIDTH / 2);
+        }
+
+        // Generate Road Lines
+        function generateLines() {
+            road.innerHTML = ''; // Clear existing lines
+            const { height } = getRoadDimensions();
+            
+            // Calculate how many lines are needed to fill the screen + one gap above/below
+            const totalLines = Math.ceil(height / (LINE_HEIGHT + LINE_GAP)) + 2; 
+
+            for (let i = 0; i < totalLines; i++) {
+                const line = document.createElement('div');
+                line.classList.add('line');
+                // Set the initial Y position based on its index
+                line.style.top = `${i * (LINE_HEIGHT + LINE_GAP) - LINE_GAP}px`;
+                road.appendChild(line);
+            }
+        }
+
+        // Move Road Lines
+        function moveLines() {
+            const lines = road.querySelectorAll('.line');
+            const { height } = getRoadDimensions();
+
+            lines.forEach(line => {
+                let currentTop = parseFloat(line.style.top);
+                currentTop += currentSpeed;
+                
+                // If line moves off screen, reset it to the top
+                if (currentTop >= height) {
+                    currentTop -= (LINE_HEIGHT + LINE_GAP) * lines.length;
+                }
+                line.style.top = `${currentTop}px`;
+            });
+        }
+
+        // --- Enemy Car Logic ---
+
+        let enemyCars = [];
+        let enemySpawnTimer = 0;
+        const ENEMY_SPAWN_RATE = 100; // Decrease for faster spawning
+        const LANE_POSITIONS = [0.15, 0.4, 0.65, 0.9]; // Relative positions in the road width
+
+        function createEnemyCar() {
+            const { width, height } = getRoadDimensions();
+            
+            // Select a random lane position
+            const laneIndex = Math.floor(Math.random() * LANE_POSITIONS.length);
+            const lanePosition = LANE_POSITIONS[laneIndex];
+            
+            const car = document.createElement('div');
+            car.classList.add('enemy-car');
+            car.style.left = `${width * lanePosition - (CAR_WIDTH / 2)}px`;
+            car.style.top = `-${CAR_HEIGHT}px`; // Start above the screen
+            
+            // Randomly choose an enemy car color (for variety)
+            const colors = ['#ff3366', '#4a00e0', '#ffcc00'];
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+            car.style.backgroundColor = randomColor;
+            car.style.boxShadow = `0 0 20px ${randomColor}`;
+
+            road.appendChild(car);
+            enemyCars.push(car);
+        }
+
+        function moveEnemies() {
+            const { height } = getRoadDimensions();
+            
+            enemyCars.forEach((car, index) => {
+                let currentTop = parseFloat(car.style.top);
+                currentTop += currentSpeed;
+                car.style.top = `${currentTop}px`;
+
+                // Remove car if it goes off screen
+                if (currentTop > height) {
+                    car.remove();
+                    enemyCars.splice(index, 1);
+                    score++; // Score increases when an enemy is successfully passed
+                }
+            });
+
+            // Spawn new enemy car based on timer
+            enemySpawnTimer++;
+            if (enemySpawnTimer > ENEMY_SPAWN_RATE - (currentSpeed * 2)) {
+                createEnemyCar();
+                enemySpawnTimer = 0;
+            }
+        }
+
+        // --- Game Logic ---
+
+        function updateScore() {
+            scoreValueDisplay.textContent = score;
+            // Increase speed every 50 points
+            currentSpeed = GAME_SPEED_BASE + Math.floor(score / 50) * 0.8;
+            currentSpeed = Math.min(currentSpeed, 18); // Max speed limit
+        }
+
+        function checkCollision() {
+            const playerRect = playerCar.getBoundingClientRect();
+            
+            for (const car of enemyCars) {
+                const enemyRect = car.getBoundingClientRect();
+                
+                // Check for overlap on all sides
+                if (
+                    playerRect.left < enemyRect.right &&
+                    playerRect.right > enemyRect.left &&
+                    playerRect.top < enemyRect.bottom &&
+                    playerRect.bottom > enemyRect.top
+                ) {
+                    // Collision detected!
+                    endGame();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+
+            // 1. Handle Player Movement
+            const { width } = getRoadDimensions();
+            const moveStep = 8; // Player movement step
+            
+            if (keys.ArrowLeft) {
+                playerX = Math.max(playerX - moveStep, 0); // Clamp left boundary
+            }
+            if (keys.ArrowRight) {
+                playerX = Math.min(playerX + moveStep, width - CAR_WIDTH); // Clamp right boundary
+            }
+            playerCar.style.left = `${playerX}px`;
+
+
+            // 2. Game World Updates
+            moveLines();
+            moveEnemies();
+            updateScore();
+            
+            // 3. Check for Game Over
+            if (checkCollision()) {
+                return; // Stop the loop immediately on collision
+            }
+
+            // Request next frame
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        // --- Game State Functions ---
+
+        function resetGame() {
+            score = 0;
+            currentSpeed = GAME_SPEED_BASE;
+            enemyCars.forEach(car => car.remove());
+            enemyCars = [];
+            enemySpawnTimer = 0;
+            scoreValueDisplay.textContent = '0';
+            highScoreValueDisplay.textContent = highScore;
+            
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            playerCar.style.display = 'block';
+            
+            // Initialize positions and lines
+            initPositions();
+            generateLines();
+        }
+
+        function startGame() {
+            resetGame();
+            isPlaying = true;
+            document.getElementById('hud').style.display = 'flex';
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            isPlaying = false;
+            cancelAnimationFrame(animationFrameId);
+            playerCar.style.display = 'none';
+
+            // Update High Score
+            let isNewHighScore = false;
+            if (score > highScore) {
+                highScore = score;
+                localStorage.setItem('neonRacerHighScore', highScore);
+                isNewHighScore = true;
+            }
+
+            finalScoreDisplay.textContent = score;
+            newHighScoreDisplay.textContent = highScore + (isNewHighScore ? ' (NEW!)' : '');
+
+            gameOverScreen.classList.remove('hidden');
+        }
+
+        // --- Event Handlers ---
+
+        function handleKeyDown(e) {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                keys[e.key] = true;
+                e.preventDefault(); // Prevent scrolling
+            }
+        }
+
+        function handleKeyUp(e) {
+            if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+                keys[e.key] = false;
+            }
+        }
+        
+        // Touch controls for mobile
+        function handleTouch(e) {
+            if (!isPlaying) return;
+            e.preventDefault();
+            
+            const touchX = e.touches[0].clientX;
+            const screenWidth = window.innerWidth;
+            
+            // Determine if touch is on the left or right half of the game area
+            if (touchX < screenWidth / 2) {
+                keys.ArrowLeft = true;
+                keys.ArrowRight = false;
+            } else {
+                keys.ArrowRight = true;
+                keys.ArrowLeft = false;
+            }
+        }
+        
+        function handleTouchEnd(e) {
+            keys.ArrowLeft = false;
+            keys.ArrowRight = false;
+        }
+
+
+        // Load initial state and event listeners
+        window.onload = function() {
+            highScoreValueDisplay.textContent = highScore;
+            initPositions();
+            generateLines(); // Initial drawing of lines
+
+            // Keyboard Listeners
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+            
+            // Touch/Mouse Listeners (on the container)
+            container.addEventListener('touchstart', handleTouch);
+            container.addEventListener('touchend', handleTouchEnd);
+            container.addEventListener('mousedown', handleTouch); // Treat mouse click like touch start
+            container.addEventListener('mouseup', handleTouchEnd); // Treat mouse release like touch end
+
+            // Ensure player car starts hidden until game starts
+            playerCar.style.display = 'none'; 
+        };
+        
+        // Handle window resize (important for responsiveness)
+        window.addEventListener('resize', () => {
+             if (!isPlaying) {
+                 initPositions(); // Re-center car if not playing
+                 generateLines(); // Re-generate lines to fit new size
+             }
+        });
+
+    </script>
+
+</body>
+</html>
+  
+    <a href="https://deploysite.netlify.app" target="_blank" class="bishnoi-deployer-watermark">
+      Bishnoi deployer
+    </a>
+  
+  <script>
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function (e) {
+    e.preventDefault();
+
+    document.querySelector(this.getAttribute('href')).scrollIntoView({
+      behavior: 'smooth'
+    });
+  });
+});
+
+  </script>
+</body>
+</html>
