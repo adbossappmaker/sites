@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>chess-game</title>
+  <style>
+    body {
+  font-family: sans-serif;
+  padding: 2rem;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+h1 {
+  color: #2E3192;
+}
+
+button {
+  background-color: #6639A6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #522d83;
+}
+
+    
+    .bishnoi-deployer-watermark {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 5px;
+      text-decoration: none;
+      z-index: 1000;
+      transition: background-color 0.3s;
+    }
+    .bishnoi-deployer-watermark:hover {
+      background-color: rgba(0, 0, 0, 0.9);
+    }
+  
+  </style>
+</head>
+<body>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sleek Chess Game</title>
+    <!-- Load Tailwind CSS for utility classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap');
+        
+        /* Custom CSS for the game board and aesthetics */
+        :root {
+            --color-dark: #769656; /* Dark Green */
+            --color-light: #eeeed2; /* Light Beige */
+            --color-select: #f6f669; /* Selection Yellow */
+            --color-highlight: rgba(255, 255, 0, 0.4); /* Move highlight */
+            --color-bg-primary: #1e293b; /* Dark Slate Background */
+            --color-ui: #334155; /* Slightly Lighter Slate for UI */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-bg-primary);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        /* Main Game Container Styling */
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 900px;
+            width: 100%;
+            background-color: var(--color-ui);
+            padding: 24px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        @media (min-width: 768px) {
+            .game-container {
+                flex-direction: row;
+                align-items: flex-start;
+            }
+        }
+
+        /* Chess Board Grid */
+        #chessboard {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            grid-template-rows: repeat(8, 1fr);
+            aspect-ratio: 1 / 1;
+            border: 8px solid var(--color-ui);
+            border-radius: 8px;
+            overflow: hidden;
+            flex-grow: 1;
+        }
+
+        .square {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            position: relative;
+            transition: background-color 0.1s;
+        }
+
+        .light {
+            background-color: var(--color-light);
+        }
+
+        .dark {
+            background-color: var(--color-dark);
+        }
+
+        /* Piece Styling */
+        .piece {
+            font-size: clamp(28px, 6vw, 60px); /* Responsive font size for pieces */
+            line-height: 1;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+            transition: transform 0.1s ease-in-out;
+        }
+
+        .white-piece {
+            color: #ffffff;
+            opacity: 0.9;
+        }
+        
+        .black-piece {
+            color: #212121;
+            opacity: 0.95;
+        }
+
+        /* Interactive States */
+        .square:hover {
+            opacity: 0.9;
+        }
+
+        .selected {
+            box-shadow: inset 0 0 0 4px var(--color-select);
+        }
+        
+        .potential-move {
+            background-color: rgba(255, 255, 0, 0.6) !important;
+            /* Using !important to override the square colors */
+            position: relative;
+        }
+        
+        .potential-move::after {
+            content: '';
+            position: absolute;
+            width: 30%;
+            height: 30%;
+            border-radius: 50%;
+            background-color: rgba(0, 0, 0, 0.3);
+        }
+
+        /* Sidebar/Control Panel */
+        .control-panel {
+            min-width: 250px;
+            max-width: 300px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            color: #e2e8f0;
+        }
+        
+        /* Button Styling */
+        .btn {
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 700;
+            transition: background-color 0.2s, transform 0.1s, box-shadow 0.2s;
+            cursor: pointer;
+            text-align: center;
+        }
+
+        .btn-primary {
+            background-color: #f59e0b; /* Amber */
+            color: #1e293b;
+            box-shadow: 0 4px #b45309;
+        }
+
+        .btn-primary:hover {
+            background-color: #fbbf24;
+            transform: translateY(-1px);
+        }
+        
+        .btn-primary:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px #b45309;
+        }
+    </style>
+</head>
+<body>
+
+<div class="game-container">
+    
+    <!-- Chess Board Area -->
+    <div id="chessboard">
+        <!-- Squares will be generated here by JavaScript -->
+    </div>
+
+    <!-- Control and Info Panel -->
+    <div class="control-panel">
+        <h1 class="text-3xl font-bold text-center text-amber-400">Zen Chess</h1>
+        
+        <div class="p-4 rounded-lg bg-gray-700 shadow-md">
+            <p class="text-sm font-medium mb-2 text-gray-400">Current Turn:</p>
+            <div id="currentTurn" class="text-2xl font-bold text-white transition-colors duration-300">White</div>
+        </div>
+
+        <div class="p-4 rounded-lg bg-gray-700 shadow-md">
+            <p class="text-sm font-medium mb-2 text-gray-400">Status:</p>
+            <div id="statusMessage" class="text-lg font-semibold text-green-400">Game in progress...</div>
+        </div>
+        
+        <button id="resetBtn" class="btn btn-primary mt-4">
+            New Game
+        </button>
+        
+        <!-- Instruction/Message Box (replacing alert()) -->
+        <div id="messageBox" class="p-3 bg-red-600 rounded-lg text-white font-medium hidden">
+            <p id="messageText"></p>
+        </div>
+    </div>
+    
+</div>
+
+<script>
+    // Global variables from Canvas environment (MUST be included)
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+    // --- Firebase/Firestore Setup (Standard Pattern) ---
+    // Although this is a local game, we initialize Firebase as required for persistent storage/multiplayer in future versions.
+    let db, auth;
+    let userId;
+
+    if (Object.keys(firebaseConfig).length > 0) {
+        // Load Firebase modules dynamically
+        const script = document.createElement('script');
+        script.type = 'module';
+        script.innerHTML = `
+            import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+            import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+            import { getFirestore, setLogLevel, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+            window.initFirebase = async function() {
+                try {
+                    const app = initializeApp(${JSON.stringify(firebaseConfig)});
+                    window.db = getFirestore(app);
+                    window.auth = getAuth(app);
+                    setLogLevel('debug');
+
+                    if (window.initialAuthToken) {
+                        await signInWithCustomToken(window.auth, window.initialAuthToken);
+                    } else {
+                        await signInAnonymously(window.auth);
+                    }
+
+                    onAuthStateChanged(window.auth, (user) => {
+                        window.userId = user ? user.uid : 'anonymous-user-' + Math.random().toString(36).substring(2, 9);
+                        console.log("Auth state changed. User ID:", window.userId);
+                    });
+                } catch (error) {
+                    console.error("Firebase initialization failed:", error);
+                }
+            };
+            window.initialAuthToken = ${JSON.stringify(initialAuthToken)};
+            window.initFirebase();
+        `;
+        document.head.appendChild(script);
+    }
+    // End of Firebase setup
+
+    // --- Chess Game Logic ---
+    
+    // Unicode Chess Pieces
+    const PIECES = {
+        'r': '\u265C', 'n': '\u265E', 'b': '\u265D', 'q': '\u265B', 'k': '\u265A', 'p': '\u265F', // Black
+        'R': '\u2656', 'N': '\u2658', 'B': '\u2657', 'Q': '\u2655', 'K': '\u2654', 'P': '\u2659'  // White
+    };
+
+    // Initial FEN (Standard starting position)
+    const STARTING_FEN = 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
+    
+    let boardState = []; // Array of 64 strings (piece symbols or empty)
+    let turn = 'w';      // 'w' or 'b'
+    let selectedSquareIndex = null;
+
+    const boardElement = document.getElementById('chessboard');
+    const currentTurnElement = document.getElementById('currentTurn');
+    const statusMessageElement = document.getElementById('statusMessage');
+    const messageBox = document.getElementById('messageBox');
+    const messageText = document.getElementById('messageText');
+
+    /**
+     * Shows a custom message box instead of using alert().
+     * @param {string} message The message to display.
+     * @param {string} type 'success', 'error', or 'info'.
+     */
+    function showMessage(message, type = 'info') {
+        messageText.textContent = message;
+        messageBox.classList.remove('hidden', 'bg-red-600', 'bg-green-600', 'bg-blue-600');
+        
+        switch(type) {
+            case 'error':
+                messageBox.classList.add('bg-red-600');
+                break;
+            case 'success':
+                messageBox.classList.add('bg-green-600');
+                break;
+            case 'info':
+            default:
+                messageBox.classList.add('bg-blue-600');
+        }
+        
+        setTimeout(() => {
+            messageBox.classList.add('hidden');
+        }, 3000);
+    }
+
+    /**
+     * Converts an index (0-63) to chess notation (e.g., 0 -> 'a8', 63 -> 'h1').
+     * @param {number} index
+     * @returns {string}
+     */
+    function indexToCoords(index) {
+        const file = String.fromCharCode('a'.charCodeAt(0) + (index % 8));
+        const rank = 8 - Math.floor(index / 8);
+        return file + rank;
+    }
+
+    /**
+     * Parses a FEN string and initializes the board state array.
+     * @param {string} fen The FEN string.
+     */
+    function initializeBoard(fen) {
+        const [pieces, turnColor] = fen.split(' ');
+        boardState = [];
+        turn = turnColor === 'w' ? 'w' : 'b';
+
+        for (const char of pieces) {
+            if (char === '/') {
+                continue;
+            } else if (/\d/.test(char)) {
+                // If character is a digit, add that many empty squares
+                for (let i = 0; i < parseInt(char); i++) {
+                    boardState.push('');
+                }
+            } else {
+                // Otherwise, it's a piece
+                boardState.push(char);
+            }
+        }
+        
+        renderBoard();
+        updateTurnDisplay();
+        statusMessageElement.textContent = "Game started. White to move.";
+    }
+
+    /**
+     * Renders the chess board UI based on the current boardState.
+     */
+    function renderBoard() {
+        boardElement.innerHTML = ''; // Clear previous board
+        
+        for (let i = 0; i < 64; i++) {
+            const square = document.createElement('div');
+            square.classList.add('square');
+            square.dataset.index = i;
+            
+            // Determine square color (i + row is even for light, odd for dark)
+            const row = Math.floor(i / 8);
+            const isLight = (i + row) % 2 === 0;
+            square.classList.add(isLight ? 'light' : 'dark');
+
+            // Add piece if present
+            const pieceCode = boardState[i];
+            if (pieceCode) {
+                const pieceElement = document.createElement('span');
+                pieceElement.classList.add('piece');
+                pieceElement.classList.add(pieceCode === pieceCode.toUpperCase() ? 'white-piece' : 'black-piece');
+                pieceElement.innerHTML = PIECES[pieceCode];
+                square.appendChild(pieceElement);
+            }
+            
+            // Highlight selected square
+            if (i === selectedSquareIndex) {
+                square.classList.add('selected');
+            }
+            
+            square.addEventListener('click', handleSquareClick);
+            boardElement.appendChild(square);
+        }
+    }
+
+    /**
+     * Updates the current player display.
+     */
+    function updateTurnDisplay() {
+        const colorName = turn === 'w' ? 'White' : 'Black';
+        currentTurnElement.textContent = colorName;
+        currentTurnElement.style.color = turn === 'w' ? '#ffffff' : '#000000';
+        currentTurnElement.parentElement.style.backgroundColor = turn === 'w' ? '#334155' : '#e2e8f0';
+    }
+    
+    /**
+     * Placeholder function to check if a move is valid (simplified).
+     * This only checks if the destination square is different from the source.
+     * For a real game, this must implement all chess move rules.
+     * @param {number} fromIndex
+     * @param {number} toIndex
+     * @returns {boolean}
+     */
+    function isMoveValid(fromIndex, toIndex) {
+        if (fromIndex === toIndex) return false;
+        
+        const pieceCode = boardState[fromIndex];
+        const destPieceCode = boardState[toIndex];
+        
+        // Ensure destination is not occupied by own color
+        const isWhite = pieceCode === pieceCode.toUpperCase();
+        const isDestWhite = destPieceCode === destPieceCode.toUpperCase();
+        
+        if (destPieceCode && isWhite === isDestWhite) {
+            return false;
+        }
+
+        // --- Simplified Rook/Queen movement check (horizontal/vertical) ---
+        const fromRow = Math.floor(fromIndex / 8);
+        const fromCol = fromIndex % 8;
+        const toRow = Math.floor(toIndex / 8);
+        const toCol = toIndex % 8;
+        
+        const type = pieceCode.toLowerCase();
+        
+        if (type === 'r' || type === 'q') {
+            // Check for horizontal or vertical movement
+            if (fromRow === toRow || fromCol === toCol) {
+                // Simplified check: assume clear path (needs full path check in a real game)
+                return true;
+            }
+        }
+        
+        // Allow all other pieces for demo purposes, if this is not a capture on own piece
+        return true;
+    }
+
+    /**
+     * Handles square clicks for piece selection and movement.
+     * @param {Event} event
+     */
+    function handleSquareClick(event) {
+        const targetSquare = event.currentTarget;
+        const clickedIndex = parseInt(targetSquare.dataset.index);
+        const piece = boardState[clickedIndex];
+        
+        // Determine if the piece belongs to the current player
+        const isPieceOfCurrentPlayer = piece && 
+            ((turn === 'w' && piece === piece.toUpperCase()) || 
+             (turn === 'b' && piece === piece.toLowerCase()));
+
+        if (selectedSquareIndex === null) {
+            // 1. No piece is selected, try to select one
+            if (isPieceOfCurrentPlayer) {
+                selectedSquareIndex = clickedIndex;
+                targetSquare.classList.add('selected');
+                showMessage(`Selected piece at ${indexToCoords(clickedIndex)}.`, 'info');
+                // Re-render to show selection highlight
+                renderBoard(); 
+            } else if (piece) {
+                showMessage(`It's ${turn === 'w' ? 'White' : 'Black'}'s turn. That is a hostile piece.`, 'error');
+            } else {
+                showMessage("Please select a piece to move.", 'info');
+            }
+        } else {
+            // 2. A piece is already selected, this click is for movement
+            const fromIndex = selectedSquareIndex;
+            const toIndex = clickedIndex;
+
+            // If the user clicks their already selected piece, deselect it
+            if (fromIndex === toIndex) {
+                selectedSquareIndex = null;
+                renderBoard();
+                showMessage("Deselected piece.", 'info');
+                return;
+            }
+            
+            // Check if move is valid (using simplified rule)
+            if (isMoveValid(fromIndex, toIndex)) {
+                // Move the piece
+                boardState[toIndex] = boardState[fromIndex];
+                boardState[fromIndex] = '';
+                
+                // Reset selection
+                selectedSquareIndex = null;
+                
+                // Switch turn
+                turn = turn === 'w' ? 'b' : 'w';
+                
+                // Re-render
+                renderBoard();
+                updateTurnDisplay();
+                showMessage(`Move made from ${indexToCoords(fromIndex)} to ${indexToCoords(toIndex)}.`, 'success');
+            } else {
+                showMessage("Invalid move for this piece.", 'error');
+                // Deselect on invalid move
+                selectedSquareIndex = null;
+                renderBoard();
+            }
+        }
+    }
+
+    document.getElementById('resetBtn').addEventListener('click', () => {
+        initializeBoard(STARTING_FEN);
+        showMessage("Game has been reset!", 'success');
+    });
+
+    // Initialize the game when the window loads
+    window.onload = function() {
+        initializeBoard(STARTING_FEN);
+    }
+</script>
+
+</body>
+</html>
+  
+    <a href="https://deploysite.netlify.app" target="_blank" class="bishnoi-deployer-watermark">
+      Bishnoi deployer
+    </a>
+  
+  <script>
+    const button = document.getElementById('myButton');
+button.addEventListener('click', () => {
+  alert('Hello from your deployed site!');
+});
+
+  </script>
+</body>
+</html>
