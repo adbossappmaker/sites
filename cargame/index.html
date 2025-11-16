@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>cargame</title>
+  <style>
+    body {
+  font-family: sans-serif;
+  padding: 2rem;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+h1 {
+  color: #2E3192;
+}
+
+button {
+  background-color: #6639A6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #522d83;
+}
+
+  </style>
+</head>
+<body>
+  <!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D कार ड्राइविंग सिमुलेशन</title>
+    <!-- Three.js 3D ग्राफ़िक्स के लिए -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Cannon.js भौतिकी (Physics) इंजन के लिए -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cannon.js/0.6.2/cannon.min.js"></script>
+    <script>
+        // Tailwind CSS लोड कर रहे हैं (UI तत्वों के लिए)
+        document.write('<script src="https://cdn.tailwindcss.com"><\/script>');
+    </script>
+    <style>
+        /* सामान्य स्टाइलिंग */
+        body { margin: 0; overflow: hidden; background-color: #0d1117; color: #ffffff; font-family: 'Inter', sans-serif; }
+        canvas { display: block; }
+        
+        /* कंटेनर जो UI और कैनवस को होल्ड करेगा */
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* नियंत्रणों और जानकारी के लिए UI ओवरले */
+        #ui-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 10px;
+            pointer-events: none; /* ताकि UI, गेम के क्लिक इवेंट्स को ब्लॉक न करे */
+            z-index: 10;
+        }
+
+        /* नियंत्रण निर्देश बॉक्स */
+        .controls-box {
+            background-color: rgba(0, 0, 0, 0.6);
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            backdrop-filter: blur(5px);
+            max-width: 300px;
+            margin: 20px;
+            position: absolute;
+            bottom: 0;
+            left: 0;
+        }
+
+        /* गति मीटर */
+        #speed-meter {
+            background-color: rgba(4, 94, 92, 0.7);
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            max-width: 250px;
+            margin: 20px;
+            position: absolute;
+            top: 0;
+            right: 0;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <!-- UI ओवरले -->
+        <div id="ui-overlay">
+            <div id="speed-meter" class="text-xl font-bold">
+                गति: 0 km/h
+            </div>
+            <div class="controls-box">
+                <h3 class="text-lg font-semibold mb-2 text-cyan-400">नियंत्रण (Controls)</h3>
+                <ul class="text-sm space-y-1">
+                    <li><span class="font-mono bg-gray-700 px-2 py-0.5 rounded">↑</span>: आगे बढ़ें (Accelerate)</li>
+                    <li><span class="font-mono bg-gray-700 px-2 py-0.5 rounded">↓</span>: ब्रेक/पीछे (Brake/Reverse)</li>
+                    <li><span class="font-mono bg-gray-700 px-2 py-0.5 rounded">←</span>: बाएँ (Steer Left)</li>
+                    <li><span class="font-mono bg-gray-700 px-2 py-0.5 rounded">→</span>: दाएँ (Steer Right)</li>
+                </ul>
+                <p class="text-xs mt-3 text-gray-400">यह थ्री.जेएस और कैनन.जेएस पर आधारित एक साधारण 3D सिमुलेशन है।</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- फायरबेस कॉन्फ़िगरेशन (यहाँ डेटाबेस का उपयोग नहीं हो रहा, लेकिन ढांचा आवश्यक है) ---
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // --- ग्लोबल गेम वेरिएबल्स ---
+        let scene, camera, renderer, carMesh, world, carBody;
+        let clock = new THREE.Clock();
+        const keys = {
+            ArrowUp: false,
+            ArrowDown: false,
+            ArrowLeft: false,
+            ArrowRight: false
+        };
+        const maxSpeed = 30; // अधिकतम गति
+        const acceleration = 50; // त्वरण
+        const braking = 80; // ब्रेक की ताकत
+        const steeringSpeed = 0.5; // स्टीयरिंग की गति
+        const drag = 0.99; // हवा का घर्षण
+
+        // --- Three.js और Cannon.js को आरंभ करना ---
+        function init() {
+            // 1. Scene (दृश्य) सेट अप
+            scene = new THREE.Scene();
+            scene.fog = new THREE.Fog(0x0d1117, 10, 150); // दूर की चीज़ों को धुंधला करने के लिए
+
+            // 2. Camera (कैमरा) सेट अप
+            const aspect = window.innerWidth / window.innerHeight;
+            camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000);
+            // कैमरा कार के पीछे और ऊपर स्थित होगा
+            camera.position.set(0, 5, -10); 
+            camera.lookAt(0, 0, 0); // शुरुआत में केंद्र की ओर देखें
+
+            // 3. Renderer (रेंडरर) सेट अप
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setClearColor(0x0d1117);
+            renderer.shadowMap.enabled = true; // परछाईं के लिए
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.getElementById('game-container').appendChild(renderer.domElement);
+
+            // 4. Lighting (रोशनी)
+            // सूरज की रोशनी (दिशात्मक)
+            const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+            sun.position.set(50, 100, 50);
+            sun.castShadow = true;
+            // परछाईं सेटिंग्स
+            sun.shadow.mapSize.width = 2048;
+            sun.shadow.mapSize.height = 2048;
+            sun.shadow.camera.near = 1;
+            sun.shadow.camera.far = 200;
+            sun.shadow.camera.left = -100;
+            sun.shadow.camera.right = 100;
+            sun.shadow.camera.top = 100;
+            sun.shadow.camera.bottom = -100;
+            scene.add(sun);
+
+            // परिवेश की रोशनी
+            const ambient = new THREE.AmbientLight(0x404040, 1.2);
+            scene.add(ambient);
+
+            // 5. Cannon.js Physics World (भौतिकी दुनिया)
+            world = new CANNON.World();
+            world.gravity.set(0, -9.82, 0); // गुरुत्वाकर्षण
+            world.broadphase = new CANNON.NaiveBroadphase(); // टकराव का पता लगाना
+            world.solver.iterations = 10;
+
+            createRoad();
+            createCar();
+
+            // विंडो आकार बदलने पर प्रतिक्रिया
+            window.addEventListener('resize', onWindowResize);
+            
+            // कीबोर्ड इवेंट लिसनर्स
+            window.addEventListener('keydown', onKeyDown);
+            window.addEventListener('keyup', onKeyUp);
+        }
+
+        // --- सड़क और ज़मीन बनाना ---
+        function createRoad() {
+            // ज़मीन (Ground) - Cannon.js
+            const groundShape = new CANNON.Plane();
+            const groundBody = new CANNON.Body({ mass: 0, shape: groundShape });
+            groundBody.quaternion.setFromAxisAngle(new CANNON.Vec3(1, 0, 0), -Math.PI / 2); // X-अक्ष पर 90 डिग्री घुमाएँ
+            world.addBody(groundBody);
+
+            // सड़क (Road) - Three.js (लंबा प्लेन)
+            const roadGeometry = new THREE.PlaneGeometry(10, 500); // चौड़ाई 10, लम्बाई 500
+            // मैटेरियल: गहरे धूसर रंग का
+            const roadMaterial = new THREE.MeshPhongMaterial({ color: 0x222222, side: THREE.DoubleSide });
+            const roadMesh = new THREE.Mesh(roadGeometry, roadMaterial);
+            roadMesh.rotation.x = -Math.PI / 2; // इसे समतल लिटा दें
+            roadMesh.receiveShadow = true; // परछाईं प्राप्त करेगा
+            scene.add(roadMesh);
+
+            // सड़क की मध्य रेखाएं (Dashed Lines)
+            const lineMaterial = new THREE.MeshBasicMaterial({ color: 0xf0f0f0 });
+            const segmentLength = 5;
+            const gapLength = 5;
+            
+            for (let i = -25; i < 25; i++) {
+                const lineGeometry = new THREE.BoxGeometry(0.2, 0.1, segmentLength); // पतली, छोटी पट्टी
+                const lineMesh = new THREE.Mesh(lineGeometry, lineMaterial);
+                lineMesh.position.set(0, 0.05, i * (segmentLength + gapLength));
+                scene.add(lineMesh);
+            }
+
+            // परिदृश्य/साइड क्षेत्र (Green Area)
+            const fieldGeometry = new THREE.PlaneGeometry(200, 500); // बहुत चौड़ा
+            const fieldMaterial = new THREE.MeshPhongMaterial({ color: 0x38761d, side: THREE.DoubleSide });
+            const fieldMesh = new THREE.Mesh(fieldGeometry, fieldMaterial);
+            fieldMesh.rotation.x = -Math.PI / 2;
+            fieldMesh.position.y = -0.01; // सड़क के ठीक नीचे
+            fieldMesh.receiveShadow = true;
+            scene.add(fieldMesh);
+        }
+
+        // --- कार बनाना ---
+        function createCar() {
+            const carWidth = 2;
+            const carHeight = 0.8;
+            const carDepth = 4;
+
+            // 1. Car Body - Three.js (Meshes)
+            const bodyGeometry = new THREE.BoxGeometry(carWidth, carHeight, carDepth);
+            const bodyMaterial = new THREE.MeshPhongMaterial({ color: 0xff3333, shininess: 100 });
+            carMesh = new THREE.Mesh(bodyGeometry, bodyMaterial);
+            carMesh.position.y = carHeight / 2; // ज़मीन पर
+            carMesh.castShadow = true;
+
+            // केबिन/विंडशील्ड
+            const cabinGeometry = new THREE.BoxGeometry(carWidth * 0.9, carHeight * 0.8, carDepth * 0.6);
+            const cabinMaterial = new THREE.MeshPhongMaterial({ color: 0x000000, transparent: true, opacity: 0.8 });
+            const cabinMesh = new THREE.Mesh(cabinGeometry, cabinMaterial);
+            cabinMesh.position.set(0, carHeight * 0.9, carDepth * 0.1);
+
+            // कार मेषों को एक साथ समूहित करें
+            const carGroup = new THREE.Group();
+            carGroup.add(carMesh);
+            carGroup.add(cabinMesh);
+
+            scene.add(carGroup);
+            carMesh = carGroup; // अब carMesh पूरे ग्रुप को रेफर करता है
+
+            // 2. Car Body - Cannon.js (Physics)
+            const carShape = new CANNON.Box(new CANNON.Vec3(carWidth / 2, carHeight / 2, carDepth / 2));
+            carBody = new CANNON.Body({ mass: 100, shape: carShape });
+            carBody.position.set(0, carHeight / 2, 0);
+            carBody.linearDamping = 0.5; // हवा में घर्षण
+            carBody.angularDamping = 0.8; // घूर्णी घर्षण
+            world.addBody(carBody);
+        }
+
+        // --- कीबोर्ड इवेंट हैंडलर ---
+        function onKeyDown(event) {
+            if (keys.hasOwnProperty(event.key)) {
+                keys[event.key] = true;
+                event.preventDefault();
+            }
+        }
+
+        function onKeyUp(event) {
+            if (keys.hasOwnProperty(event.key)) {
+                keys[event.key] = false;
+            }
+        }
+        
+        // --- फिजिक्स और गेम लॉजिक अपडेट करें ---
+        function updatePhysics(deltaTime) {
+            // 1. भौतिकी की दुनिया को आगे बढ़ाना
+            world.step(1 / 60, deltaTime, 3);
+
+            // 2. कार की गति (Velocity) और रोटेशन (Quaternion) प्राप्त करें
+            const speed = carBody.velocity.length();
+            
+            // कार का आगे का सदिश (Forward Vector)
+            const forward = new CANNON.Vec3(0, 0, 1);
+            carBody.quaternion.vmult(forward, forward);
+
+            // 3. त्वरण/ब्रेकिंग
+            if (keys.ArrowUp) {
+                // forward: सकारात्मक Z-अक्ष पर बल लगाएँ
+                const force = forward.scale(acceleration * carBody.mass);
+                carBody.applyForce(force, carBody.position);
+            }
+            if (keys.ArrowDown) {
+                // backward: नकारात्मक Z-अक्ष पर बल लगाएँ (ब्रेक/रिवर्स)
+                const force = forward.scale(-braking * carBody.mass);
+                carBody.applyForce(force, carBody.position);
+            }
+
+            // 4. स्टीयरिंग (घूमना)
+            if (Math.abs(speed) > 0.1) { // केवल तभी मोड़ें जब कार चल रही हो
+                let angularVelocityChange = 0;
+                // कार की मौजूदा दिशा (यूलर कोण) प्राप्त करें
+                const currentRotation = new THREE.Quaternion().copy(carBody.quaternion).toEuler();
+
+                if (keys.ArrowLeft) {
+                    angularVelocityChange += steeringSpeed;
+                }
+                if (keys.ArrowRight) {
+                    angularVelocityChange -= steeringSpeed;
+                }
+                
+                // रोटेशन बल लागू करें (Y-अक्ष पर)
+                const rotationAxis = new CANNON.Vec3(0, 1, 0);
+                // carBody.angularVelocity.y += angularVelocityChange * deltaTime * 10;
+                carBody.quaternion.mult(new CANNON.Quaternion(0, Math.sin(angularVelocityChange * deltaTime * 0.5), 0, Math.cos(angularVelocityChange * deltaTime * 0.5)), carBody.quaternion);
+            }
+
+            // 5. Physics Body की स्थिति को 3D Mesh में कॉपी करें
+            carMesh.position.copy(carBody.position);
+            carMesh.quaternion.copy(carBody.quaternion);
+            
+            // 6. गति मीटर अपडेट करें
+            // km/h में गति (Cannon.js 1 यूनिट = 1 मीटर, 3.6 से गुणा करें)
+            const currentSpeedKmh = Math.round(speed * 3.6); 
+            document.getElementById('speed-meter').innerText = `गति: ${currentSpeedKmh} km/h`;
+        }
+
+        // --- कैमरा अपडेट करें (कार का पीछा करना) ---
+        function updateCamera() {
+            // कार की स्थिति
+            const carPosition = carMesh.position;
+            
+            // कैमरा की वांछित स्थिति (कार के पीछे और ऊपर)
+            const relativeCameraOffset = new THREE.Vector3(0, 5, -12);
+            // कार के रोटेशन के आधार पर ऑफसेट को घुमाएँ
+            const cameraOffset = relativeCameraOffset.applyMatrix4(carMesh.matrixWorld);
+
+            // कैमरा को वांछित स्थिति में ले जाएँ (smoothly)
+            camera.position.lerp(cameraOffset, 0.1);
+
+            // कैमरा को कार की ओर देखने के लिए सेट करें
+            camera.lookAt(carPosition.x, carPosition.y + 1, carPosition.z);
+        }
+
+        // --- मुख्य एनीमेशन लूप ---
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const deltaTime = clock.getDelta();
+
+            updatePhysics(deltaTime);
+            updateCamera();
+
+            renderer.render(scene, camera);
+        }
+
+        // --- विंडो रीसाइज़ हैंडलर ---
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // विंडो लोड होने पर गेम शुरू करें
+        window.onload = function () {
+            init();
+            animate();
+        }
+    </script>
+</body>
+</html>
+  <script>
+    const button = document.getElementById('myButton');
+button.addEventListener('click', () => {
+  alert('Hello from your deployed site!');
+});
+
+  </script>
+</body>
+</html>
