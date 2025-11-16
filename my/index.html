@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>my</title>
+  <style>
+    body {
+  font-family: sans-serif;
+  padding: 2rem;
+  background-color: #f9f9f9;
+  color: #333;
+}
+
+h1 {
+  color: #2E3192;
+}
+
+button {
+  background-color: #6639A6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+button:hover {
+  background-color: #522d83;
+}
+
+    
+  </style>
+</head>
+<body>
+  <h1>Welcome to CodeDeploy!</h1>
+<p>Edit the code on the left to see it live here.</p>
+<button id="myButton">Click me</button>
+
+  
+  <script>
+    const button = document.getElementById('myButton');
+button.addEventListener('click', () => {
+  alert('Hello from your deployed site!');
+});
+
+  </script>
+</body>
+</html>
