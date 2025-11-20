@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infinite Cosmic Zoom</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        canvas {
+            display: block;
+        }
+        #ui {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 2s;
+        }
+        h1 {
+            font-size: 1.5rem;
+            margin: 0;
+            letter-spacing: 4px;
+            text-transform: uppercase;
+            font-weight: 300;
+            text-shadow: 0 0 20px rgba(100, 200, 255, 0.8);
+        }
+        .visible {
+            opacity: 1 !important;
+        }
+        #depth-meter {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.4);
+            font-family: monospace;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="depth-meter">Distance: <span id="dist-val">0</span> Light Years</div>
+
+    <div id="ui">
+        <h1 id="location-text">The Earth</h1>
+        <p style="font-size: 0.8rem; opacity: 0.6;">Expanding Universe Visualization</p>
+    </div>
+
+    <!-- Import Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        // --- SCENE SETUP ---
+        const scene = new THREE.Scene();
+        // Deep space fog that fades to black
+        scene.fog = new THREE.FogExp2(0x000000, 0.0002); 
+
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.01, 100000);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        // --- LIGHTING ---
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        sunLight.position.set(10, 5, 5);
+        scene.add(sunLight);
+        const ambientLight = new THREE.AmbientLight(0x404040, 0.5);
+        scene.add(ambientLight);
+
+        // --- OBJECTS GROUP ---
+        // We will scale this group DOWN to simulate zooming out infinitely
+        // This avoids floating point errors with massive coordinates
+        const world = new THREE.Group();
+        scene.add(world);
+
+        // --- 1. THE PLANET ---
+        function createPlanetTexture() {
+            const canvas = document.createElement('canvas');
+            canvas.width = 512;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#1a2b4c'; 
+            ctx.fillRect(0, 0, 512, 512);
+            for(let i=0; i<400; i++) {
+                const x = Math.random() * 512;
+                const y = Math.random() * 512;
+                const r = Math.random() * 50 + 10;
+                ctx.beginPath();
+                ctx.arc(x, y, r, 0, Math.PI * 2);
+                ctx.fillStyle = `rgba(${100+Math.random()*100}, ${150+Math.random()*100}, 255, 0.1)`;
+                ctx.fill();
+            }
+            return new THREE.CanvasTexture(canvas);
+        }
+
+        const planet = new THREE.Mesh(
+            new THREE.SphereGeometry(1, 64, 64),
+            new THREE.MeshStandardMaterial({ map: createPlanetTexture(), roughness: 0.8 })
+        );
+        planet.position.set(0, 0, 0);
+        world.add(planet);
+
+        const atmosphere = new THREE.Mesh(
+            new THREE.SphereGeometry(1.1, 64, 64),
+            new THREE.MeshBasicMaterial({ color: 0x4488ff, transparent: true, opacity: 0.15, side: THREE.BackSide, blending: THREE.AdditiveBlending })
+        );
+        planet.add(atmosphere);
+
+        // --- 2. THE GALAXY (Milky Way) ---
+        // This appears when we zoom out a bit
+        const GALAXY_PARTICLES = 40000;
+        const gGeo = new THREE.BufferGeometry();
+        const gPos = new Float32Array(GALAXY_PARTICLES * 3);
+        const gCol = new Float32Array(GALAXY_PARTICLES * 3);
+        
+        const cColor = new THREE.Color('#ffaa33');
+        const oColor = new THREE.Color('#4466ff');
+
+        for(let i=0; i<GALAXY_PARTICLES; i++) {
+            const i3 = i*3;
+            const r = Math.random() * 100 + 5; // Radius (starts outside planet zone)
+            const angle = (i % 3) / 3 * Math.PI * 2 + r * 0.05 + Math.random()*0.5;
+            
+            const x = Math.cos(angle) * r + (Math.random()-0.5)*5;
+            const y = (Math.random()-0.5) * (10 - r*0.05); // Thinner at edges
+            const z = Math.sin(angle) * r + (Math.random()-0.5)*5;
+
+            gPos[i3] = x; gPos[i3+1] = y; gPos[i3+2] = z;
+
+            const mixedColor = cColor.clone().lerp(oColor, r / 100);
+            gCol[i3] = mixedColor.r; gCol[i3+1] = mixedColor.g; gCol[i3+2] = mixedColor.b;
+        }
+        gGeo.setAttribute('position', new THREE.BufferAttribute(gPos, 3));
+        gGeo.setAttribute('color', new THREE.BufferAttribute(gCol, 3));
+        
+        // Soft particle texture
+        const sCanvas = document.createElement('canvas'); sCanvas.width=32; sCanvas.height=32;
+        const sCtx = sCanvas.getContext('2d');
+        const gr = sCtx.createRadialGradient(16,16,0,16,16,16);
+        gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(1,'rgba(0,0,0,0)');
+        sCtx.fillStyle=gr; sCtx.fillRect(0,0,32,32);
+        const sTex = new THREE.CanvasTexture(sCanvas);
+
+        const galaxy = new THREE.Points(gGeo, new THREE.PointsMaterial({
+            size: 0.8, vertexColors: true, map: sTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true
+        }));
+        world.add(galaxy);
+
+        // --- 3. INFINITE UNIVERSE (Procedural Spawner) ---
+        // As we zoom out, we spawn "Galaxies" (dots) further out
+        const universeGroup = new THREE.Group();
+        world.add(universeGroup);
+
+        // Create a reusable geometry for distant galaxies
+        const distGalaxyGeo = new THREE.BufferGeometry();
+        const dCount = 2000; // Particles per batch
+        const dPos = new Float32Array(dCount * 3);
+        const dCol = new Float32Array(dCount * 3);
+        for(let i=0; i<dCount; i++) {
+            dPos[i*3] = (Math.random()-0.5); 
+            dPos[i*3+1] = (Math.random()-0.5);
+            dPos[i*3+2] = (Math.random()-0.5);
+            // Random colors for distant galaxies (White, Blue, Red, Gold)
+            const rnd = Math.random();
+            const c = rnd > 0.8 ? [1, 0.8, 0.5] : (rnd > 0.6 ? [0.5, 0.5, 1] : [1, 1, 1]);
+            dCol[i*3] = c[0]; dCol[i*3+1] = c[1]; dCol[i*3+2] = c[2];
+        }
+        distGalaxyGeo.setAttribute('position', new THREE.BufferAttribute(dPos, 3));
+        distGalaxyGeo.setAttribute('color', new THREE.BufferAttribute(dCol, 3));
+        
+        const distMat = new THREE.PointsMaterial({
+            size: 40, // Big dots because they are far
+            vertexColors: true, map: sTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true, opacity: 0.6
+        });
+
+        // Arrays to manage generated chunks
+        const galaxyChunks = [];
+        let maxSpawnDistance = 500; // Start spawning after this radius
+
+        function spawnGalaxyBatch(minDist, maxDist) {
+            const points = new THREE.Points(distGalaxyGeo, distMat);
+            // Scale the batch to cover a large shell
+            const shellSize = maxDist - minDist;
+            
+            // We randomize positions in a spherical shell
+            // Actually, simplified: Random scale + Rotation for each batch
+            points.scale.setScalar(maxDist * 2); // Spread them out
+            points.rotation.set(Math.random()*Math.PI, Math.random()*Math.PI, Math.random()*Math.PI);
+            
+            universeGroup.add(points);
+            galaxyChunks.push({ mesh: points, dist: maxDist });
+        }
+
+        // Initial Background Layer
+        spawnGalaxyBatch(200, 1000);
+
+        // --- ANIMATION STATE ---
+        let cameraZ = 3; 
+        let zoomSpeed = 0.001;
+        let zoomFactor = 1.002; // Multiplier per frame
+        let virtualDistance = 0; // To show in UI
+        
+        let mouseX = 0, mouseY = 0;
+        document.addEventListener('mousemove', (e) => {
+            mouseX = (e.clientX - window.innerWidth/2) * 0.001;
+            mouseY = (e.clientY - window.innerHeight/2) * 0.001;
+        });
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        const uiText = document.getElementById('location-text');
+        const distText = document.getElementById('dist-val');
+        const uiDiv = document.getElementById('ui');
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            // --- 1. INFINITE ZOOM MECHANIC ---
+            // Instead of moving camera to infinity (which breaks math),
+            // We Move Camera away, but when it gets too far, we scale the WORLD down.
+            
+            cameraZ *= zoomFactor;
+            virtualDistance += cameraZ * 0.1; 
+            
+            // Update Camera
+            camera.position.z = cameraZ;
+            
+            // --- 2. PROCEDURAL GENERATION (New things coming) ---
+            // As camera moves back, the "visible horizon" expands.
+            // Camera.z is the radius of our view roughly.
+            // If cameraZ exceeds the last spawn point, spawn a new layer.
+            
+            if (cameraZ * 2 > maxSpawnDistance) {
+                // Spawn new outer shell
+                spawnGalaxyBatch(maxSpawnDistance, maxSpawnDistance * 3);
+                maxSpawnDistance *= 3;
+                // Increase zoom speed slightly to traverse the emptiness
+                zoomFactor += 0.0001;
+            }
+
+            // --- 3. ROTATION & MOVEMENT ---
+            // Rotate the whole world slowly
+            world.rotation.y += 0.0005;
+            world.rotation.x += 0.0002;
+            
+            // Mouse interaction (Parallax)
+            camera.position.x += (mouseX * cameraZ * 0.5 - camera.position.x) * 0.05;
+            camera.position.y += (mouseY * cameraZ * 0.5 - camera.position.y) * 0.05;
+            camera.lookAt(0,0,0);
+
+            // --- 4. UI UPDATES ---
+            distText.innerText = Math.floor(virtualDistance).toLocaleString();
+            
+            if (virtualDistance < 10) {
+                uiText.innerText = "Planet Earth";
+                uiDiv.classList.add('visible');
+            } else if (virtualDistance < 500) {
+                uiText.innerText = "Solar System Edge";
+            } else if (virtualDistance < 10000) {
+                uiText.innerText = "Milky Way Galaxy";
+            } else if (virtualDistance < 1000000) {
+                uiText.innerText = "Local Group";
+            } else {
+                uiText.innerText = "Cosmic Web (Multiverse)";
+            }
+
+            // --- 5. FOG DENSITY CONTROL ---
+            // As we zoom out, lessen fog to see further
+            const fogDense = 0.0002 / (Math.log(cameraZ) || 1);
+            scene.fog.density = Math.max(fogDense, 0.000001);
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+
+    </script>
+</body>
+</html>
