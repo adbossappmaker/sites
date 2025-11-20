@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flappy Bird Full Stack</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+        body {
+            font-family: 'VT323', monospace;
+            touch-action: none; /* Prevent pull-to-refresh on mobile */
+            overflow: hidden;
+        }
+        .pixel-font {
+            font-family: 'VT323', monospace;
+        }
+        /* Custom Scrollbar for leaderboard */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e3a8a;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #60a5fa;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="bg-slate-900 h-screen w-screen flex items-center justify-center overflow-hidden relative">
+
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas" class="absolute top-0 left-0 w-full h-full block z-0"></canvas>
+
+    <!-- UI Layer -->
+    <div id="uiLayer" class="absolute inset-0 z-10 pointer-events-none flex flex-col justify-between p-4">
+        
+        <!-- HUD -->
+        <div class="flex justify-between items-start w-full">
+            <div class="text-white text-4xl drop-shadow-md pointer-events-auto select-none">
+                Score: <span id="scoreDisplay">0</span>
+            </div>
+            <div id="authStatus" class="text-green-400 text-sm bg-black/50 px-2 py-1 rounded pixel-font">
+                Connecting...
+            </div>
+        </div>
+
+        <!-- Start Screen -->
+        <div id="startScreen" class="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-sm pointer-events-auto transition-opacity duration-300">
+            <h1 class="text-6xl md:text-8xl text-yellow-400 mb-4 drop-shadow-[0_4px_0_rgba(0,0,0,1)] text-center">FLAPPY<br>STACK</h1>
+            
+            <div class="bg-slate-800 border-4 border-slate-600 p-6 rounded-lg shadow-2xl max-w-sm w-full">
+                <div class="mb-4">
+                    <label class="block text-slate-300 text-xl mb-1">Enter Player Name</label>
+                    <input type="text" id="playerNameInput" maxlength="10" placeholder="Player 1" 
+                        class="w-full bg-slate-900 text-white border-2 border-slate-600 px-3 py-2 rounded focus:border-yellow-400 outline-none text-2xl uppercase text-center placeholder-slate-600 transition-colors">
+                </div>
+                
+                <button id="startBtn" class="w-full bg-green-500 hover:bg-green-400 text-white text-3xl py-2 rounded border-b-4 border-green-700 active:border-b-0 active:translate-y-1 transition-all mb-4">
+                    START GAME
+                </button>
+
+                <div class="text-center text-slate-400 text-lg animate-pulse">
+                    Tap, Click, or Spacebar to Fly
+                </div>
+            </div>
+
+            <!-- Mini Leaderboard Preview -->
+            <div class="mt-8 bg-slate-900/90 border-2 border-slate-700 p-4 rounded-lg w-full max-w-sm">
+                <h3 class="text-yellow-400 text-2xl text-center border-b border-slate-700 pb-2 mb-2">TOP PILOTS</h3>
+                <ul id="miniLeaderboard" class="text-white text-xl space-y-1 h-32 overflow-y-auto">
+                    <li class="text-center text-slate-500">Loading scores...</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Game Over Screen -->
+        <div id="gameOverScreen" class="hidden absolute inset-0 flex flex-col items-center justify-center bg-red-900/80 backdrop-blur-sm pointer-events-auto z-20">
+            <h2 class="text-6xl text-white mb-2 drop-shadow-[0_4px_0_rgba(0,0,0,1)]">GAME OVER</h2>
+            
+            <div class="bg-slate-800 border-4 border-slate-600 p-6 rounded-lg shadow-2xl text-center max-w-sm w-full transform transition-all scale-100">
+                <div class="text-slate-400 text-xl">SCORE</div>
+                <div id="finalScore" class="text-6xl text-white mb-4 font-bold">0</div>
+                
+                <div id="highScoreLabel" class="hidden text-yellow-400 text-2xl mb-4 animate-bounce">NEW HIGH SCORE!</div>
+
+                <button id="restartBtn" class="w-full bg-blue-500 hover:bg-blue-400 text-white text-3xl py-2 rounded border-b-4 border-blue-700 active:border-b-0 active:translate-y-1 transition-all">
+                    TRY AGAIN
+                </button>
+                <button id="homeBtn" class="mt-3 w-full bg-slate-600 hover:bg-slate-500 text-slate-200 text-2xl py-1 rounded border-b-4 border-slate-800 active:border-b-0 active:translate-y-1 transition-all">
+                    MENU
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Firebase Scripts -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, addDoc, serverTimestamp, onSnapshot, query } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        // --- Firebase Setup ---
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        let currentUser = null;
+        let highScores = [];
+
+        // DOM Elements
+        const authStatus = document.getElementById('authStatus');
+        const miniLeaderboard = document.getElementById('miniLeaderboard');
+        const playerNameInput = document.getElementById('playerNameInput');
+
+        // Auth Flow
+        const initAuth = async () => {
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+            } catch (error) {
+                console.error("Auth Error:", error);
+                authStatus.textContent = "Offline Mode";
+                authStatus.classList.replace('text-green-400', 'text-red-400');
+            }
+        };
+
+        // Data Flow
+        const setupDataListener = (user) => {
+            if (!user) return;
+            
+            // RULE 1 & 2: Simple collection query, sort in memory
+            const scoresRef = collection(db, 'artifacts', appId, 'public', 'data', 'flappy_scores');
+            
+            // Subscribe to real-time updates
+            onSnapshot(scoresRef, (snapshot) => {
+                const tempScores = [];
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (data.score && data.name) {
+                        tempScores.push(data);
+                    }
+                });
+
+                // Sort descending by score in memory
+                highScores = tempScores.sort((a, b) => b.score - a.score).slice(0, 20); // Keep top 20
+                updateLeaderboardUI();
+            }, (error) => {
+                console.error("Firestore Error:", error);
+            });
+        };
+
+        const updateLeaderboardUI = () => {
+            miniLeaderboard.innerHTML = '';
+            if (highScores.length === 0) {
+                miniLeaderboard.innerHTML = '<li class="text-center text-slate-500">No scores yet. Be the first!</li>';
+                return;
+            }
+
+            highScores.forEach((entry, index) => {
+                const li = document.createElement('li');
+                li.className = `flex justify-between px-2 py-1 ${index === 0 ? 'text-yellow-300' : index === 1 ? 'text-slate-300' : index === 2 ? 'text-orange-300' : 'text-slate-200'}`;
+                li.innerHTML = `
+                    <span>${index + 1}. ${entry.name}</span>
+                    <span>${entry.score}</span>
+                `;
+                miniLeaderboard.appendChild(li);
+            });
+        };
+
+        const saveScoreToDb = async (score) => {
+            if (!currentUser) return;
+            
+            let name = playerNameInput.value.trim() || "Anonymous";
+            name = name.substring(0, 10).toUpperCase(); // Enforce limits
+
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'public', 'data', 'flappy_scores'), {
+                    name: name,
+                    score: score,
+                    uid: currentUser.uid,
+                    timestamp: serverTimestamp()
+                });
+                console.log("Score saved!");
+            } catch (e) {
+                console.error("Error saving score:", e);
+            }
+        };
+
+        // Initialize
+        initAuth();
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                authStatus.textContent = "Online";
+                setupDataListener(user);
+            } else {
+                authStatus.textContent = "Disconnected";
+                currentUser = null;
+            }
+        });
+
+        // Expose save function to game logic
+        window.saveGameScore = saveScoreToDb;
+    </script>
+
+    <!-- Game Logic -->
+    <script>
+        // --- Game Engine & Logic ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // UI Elements
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const scoreDisplay = document.getElementById('scoreDisplay');
+        const finalScoreDisplay = document.getElementById('finalScore');
+        const startBtn = document.getElementById('startBtn');
+        const restartBtn = document.getElementById('restartBtn');
+        const homeBtn = document.getElementById('homeBtn');
+        const highScoreLabel = document.getElementById('highScoreLabel');
+
+        // Game Constants
+        let GRAVITY = 0.25;
+        let JUMP_FORCE = -5.5; // slightly stronger jump
+        let PIPE_SPEED = 2; // base speed
+        let PIPE_SPAWN_RATE = 120; // frames
+        let PIPE_GAP = 170; // easier gap
+
+        // Game State
+        let gameState = 'START'; // START, PLAYING, GAMEOVER
+        let frames = 0;
+        let score = 0;
+        let gameLoopId;
+        let scaleRatio = 1;
+
+        // Resize Handling
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            
+            // Adjust difficulty slightly based on screen width
+            scaleRatio = Math.min(window.innerWidth / 400, 1.5);
+            // Clamp scale to prevent game breaking on huge screens
+            if (scaleRatio < 0.8) scaleRatio = 0.8;
+            
+            PIPE_GAP = 160 * scaleRatio;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Objects
+        const bird = {
+            x: 50,
+            y: 150,
+            width: 34,
+            height: 24,
+            velocity: 0,
+            radius: 12,
+            draw: function() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                // Rotate based on velocity
+                let rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (this.velocity * 0.1)));
+                ctx.rotate(rotation);
+
+                // Bird Body
+                ctx.fillStyle = '#FCD34D'; // Yellow-400
+                ctx.beginPath();
+                ctx.ellipse(0, 0, this.width/2, this.height/2, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#000';
+                ctx.stroke();
+
+                // Eye
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath();
+                ctx.arc(8, -6, 6, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(10, -6, 2, 0, Math.PI*2);
+                ctx.fill();
+
+                // Beak
+                ctx.fillStyle = '#F97316'; // Orange-500
+                ctx.beginPath();
+                ctx.ellipse(8, 6, 6, 4, 0, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Wing
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath();
+                ctx.ellipse(-6, 2, 8, 5, -0.2, 0, Math.PI*2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.restore();
+            },
+            update: function() {
+                this.velocity += GRAVITY * scaleRatio;
+                this.y += this.velocity;
+
+                // Floor collision
+                if (this.y + this.height/2 >= canvas.height - 20) { // -20 for ground height
+                    this.y = canvas.height - 20 - this.height/2;
+                    endGame();
+                }
+                
+                // Ceiling collision
+                if (this.y - this.height/2 <= 0) {
+                    this.y = this.height/2;
+                    this.velocity = 0;
+                }
+            },
+            jump: function() {
+                this.velocity = JUMP_FORCE * scaleRatio;
+            },
+            reset: function() {
+                this.x = canvas.width * 0.2; // 20% from left
+                this.y = canvas.height / 2;
+                this.velocity = 0;
+            }
+        };
+
+        const pipes = {
+            items: [],
+            reset: function() {
+                this.items = [];
+            },
+            update: function() {
+                // Add new pipe
+                if (frames % Math.floor(PIPE_SPAWN_RATE / Math.sqrt(scaleRatio)) === 0) {
+                    // Calculate random height
+                    // Ensure min height for top and bottom pipes
+                    const minPipeHeight = 50 * scaleRatio;
+                    const availableSpace = canvas.height - 20 - PIPE_GAP - (minPipeHeight * 2);
+                    const randomShift = Math.random() * availableSpace;
+                    const topHeight = minPipeHeight + randomShift;
+
+                    this.items.push({
+                        x: canvas.width,
+                        topHeight: topHeight,
+                        bottomY: topHeight + PIPE_GAP,
+                        width: 60 * scaleRatio,
+                        passed: false
+                    });
+                }
+
+                // Move pipes
+                for (let i = 0; i < this.items.length; i++) {
+                    let p = this.items[i];
+                    p.x -= (PIPE_SPEED * scaleRatio);
+
+                    // Collision Detection
+                    // Horizontal overlap
+                    if (bird.x + bird.width/2 > p.x && bird.x - bird.width/2 < p.x + p.width) {
+                        // Vertical check (hit top pipe OR hit bottom pipe)
+                        if (bird.y - bird.height/2 < p.topHeight || bird.y + bird.height/2 > p.bottomY) {
+                            endGame();
+                        }
+                    }
+
+                    // Score Update
+                    if (p.x + p.width < bird.x && !p.passed) {
+                        score++;
+                        scoreDisplay.innerText = score;
+                        p.passed = true;
+                        // Slightly increase difficulty over time? 
+                        // Not needed for simple clone, but good for polish.
+                    }
+
+                    // Remove off-screen pipes
+                    if (p.x + p.width < 0) {
+                        this.items.shift();
+                        i--;
+                    }
+                }
+            },
+            draw: function() {
+                ctx.fillStyle = '#22c55e'; // Green-500
+                ctx.strokeStyle = '#14532d'; // Green-900
+                ctx.lineWidth = 3;
+
+                for (let i = 0; i < this.items.length; i++) {
+                    let p = this.items[i];
+                    
+                    // Top Pipe
+                    ctx.fillRect(p.x, 0, p.width, p.topHeight);
+                    ctx.strokeRect(p.x, -2, p.width, p.topHeight + 2); // -2 to hide top border
+                    
+                    // Top Cap
+                    ctx.fillStyle = '#4ade80'; // Lighter green highlight
+                    ctx.fillRect(p.x + 5, 0, 5, p.topHeight); // Highlight strip
+                    ctx.fillStyle = '#22c55e'; // Reset
+                    
+                    // Pipe Cap details
+                    ctx.fillRect(p.x - 4, p.topHeight - 20, p.width + 8, 20);
+                    ctx.strokeRect(p.x - 4, p.topHeight - 20, p.width + 8, 20);
+
+
+                    // Bottom Pipe
+                    let bottomHeight = canvas.height - p.bottomY - 20; // -20 for ground
+                    ctx.fillRect(p.x, p.bottomY, p.width, bottomHeight);
+                    ctx.strokeRect(p.x, p.bottomY, p.width, bottomHeight);
+
+                    // Bottom Pipe Cap
+                    ctx.fillRect(p.x - 4, p.bottomY, p.width + 8, 20);
+                    ctx.strokeRect(p.x - 4, p.bottomY, p.width + 8, 20);
+                    
+                    // Highlight strip bottom
+                    ctx.fillStyle = '#4ade80';
+                    ctx.fillRect(p.x + 5, p.bottomY + 20, 5, bottomHeight - 20);
+                    ctx.fillStyle = '#22c55e';
+                }
+            }
+        };
+
+        // Background & Ground
+        function drawBackground() {
+            // Sky
+            ctx.fillStyle = '#60a5fa'; // Blue-400
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Clouds (Procedural-ish)
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+            const cloudSpeed = frames * 0.5;
+            for(let i=0; i<5; i++) {
+                let x = ((i * 300) + cloudSpeed) % (canvas.width + 200) - 100;
+                let y = canvas.height - 100 - (i * 50) % 200;
+                ctx.beginPath();
+                ctx.arc(x, y, 40, 0, Math.PI * 2);
+                ctx.arc(x+30, y-20, 50, 0, Math.PI * 2);
+                ctx.arc(x+70, y, 40, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Cityscape Silhouette
+            ctx.fillStyle = '#1e3a8a'; // Dark Blue
+            let cityOffset = (frames * 0.2) % 100;
+            for(let i=0; i<canvas.width/40 + 2; i++) {
+                let h = 50 + Math.sin(i * 132) * 30;
+                ctx.fillRect((i * 40) - cityOffset, canvas.height - 20 - h, 42, h);
+            }
+        }
+
+        function drawGround() {
+            ctx.fillStyle = '#d97706'; // Amber-600 (Ground)
+            ctx.fillRect(0, canvas.height - 20, canvas.width, 20);
+            
+            // Moving grass top
+            ctx.fillStyle = '#65a30d'; // Lime-600
+            ctx.fillRect(0, canvas.height - 20, canvas.width, 5);
+            
+            // Ground scrolling pattern
+            ctx.strokeStyle = '#b45309';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            let groundOffset = (frames * PIPE_SPEED * scaleRatio) % 20;
+            for (let i = -1; i < canvas.width / 20 + 1; i++) {
+                ctx.moveTo(i * 20 - groundOffset, canvas.height - 20);
+                ctx.lineTo(i * 20 - groundOffset - 10, canvas.height);
+            }
+            ctx.stroke();
+        }
+
+        // --- Game Loop Functions ---
+        function update() {
+            if (gameState !== 'PLAYING') return;
+            bird.update();
+            pipes.update();
+            frames++;
+        }
+
+        function draw()
