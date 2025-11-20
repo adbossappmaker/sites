@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Flappy Bird Ultimate</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #333;
+            touch-action: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 480px;
+            margin: 0 auto;
+            background-color: #70c5ce;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            transition: background-color 0.5s ease;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .pixel-font {
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
+            text-shadow: 2px 2px 0 #000;
+        }
+        /* Custom Scrollbar for Settings */
+        .custom-scroll::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scroll::-webkit-scrollbar-track {
+            background: #1f2937; 
+        }
+        .custom-scroll::-webkit-scrollbar-thumb {
+            background: #4b5563; 
+            border-radius: 3px;
+        }
+        .custom-scroll::-webkit-scrollbar-thumb:hover {
+            background: #6b7280; 
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+
+        <!-- UI Layer -->
+        <div id="ui-layer" class="absolute inset-0 pointer-events-none flex flex-col justify-between">
+            
+            <!-- Settings Button -->
+            <button id="settings-btn" class="absolute top-4 right-4 pointer-events-auto bg-white/20 hover:bg-white/40 text-white p-2 rounded-full transition z-50 backdrop-blur-sm group">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6 group-hover:rotate-90 transition-transform duration-300">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M10.34 15.84c-.688-.06-1.386-.09-2.09-.09H7.5a4.5 4.5 0 110-9h.75c.704 0 1.402-.03 2.09-.09m0 9.18c.253.962.584 1.892.985 2.783.247.55.06 1.21-.463 1.511l-.657.38c-.551.318-1.26.117-1.527-.461a20.845 20.845 0 01-1.44-4.282m3.102.069a18.03 18.03 0 01-.59-4.59c0-1.586.205-3.124.59-4.59m0 9.18a23.848 23.848 0 018.835 2.535M10.34 6.66a23.847 23.847 0 018.835-2.535m0 0A23.74 23.74 0 0018.795 3m.38 1.125a23.91 23.91 0 011.014 5.395m-1.014 8.855c-.118.38-.245.754-.38 1.125m.38-1.125a23.91 23.91 0 001.014-5.395m0-3.46c.495.439.875 1.038.875 1.73 0 .692-.38 1.291-.875 1.73" />
+                </svg>
+            </button>
+
+            <!-- HUD -->
+            <div class="w-full flex justify-center pt-10">
+                <div id="score-display" class="pixel-font text-white text-6xl hidden drop-shadow-lg">0</div>
+            </div>
+
+            <!-- Start Screen -->
+            <div id="start-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-black/40 pointer-events-auto backdrop-blur-sm">
+                <h1 class="pixel-font text-white text-6xl mb-2 text-center drop-shadow-[0_5px_5px_rgba(0,0,0,0.5)]">FLAPPY<br>BIRD</h1>
+                <div class="bg-white/90 p-6 rounded-2xl shadow-2xl text-center transform transition hover:scale-105 duration-300">
+                    <p class="text-gray-600 mb-4 font-bold text-lg">Tap, Click, or Spacebar</p>
+                    <button id="start-btn" class="bg-gradient-to-b from-green-400 to-green-600 hover:from-green-500 hover:to-green-700 text-white font-bold py-3 px-10 rounded-full text-2xl transition shadow-lg border-b-4 border-green-800 active:border-b-0 active:translate-y-1">
+                        PLAY
+                    </button>
+                </div>
+            </div>
+
+            <!-- Game Over Screen -->
+            <div id="game-over-screen" class="absolute inset-0 flex flex-col items-center justify-center bg-black/70 pointer-events-auto hidden opacity-0 transition-opacity duration-300 backdrop-blur-sm">
+                <h2 class="pixel-font text-orange-500 text-6xl mb-6 drop-shadow-[0_4px_0_#000]">GAME OVER</h2>
+                
+                <div class="bg-[#ded895] p-6 rounded-lg border-4 border-[#e0a02e] shadow-2xl w-72 text-center mb-6 relative">
+                    <div class="flex justify-between px-4 mb-2">
+                        <div class="text-left">
+                            <p class="text-[#e0a02e] font-bold text-xs uppercase tracking-wider">Score</p>
+                            <p id="final-score" class="text-white text-4xl font-bold drop-shadow-md pixel-font">0</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="text-[#e0a02e] font-bold text-xs uppercase tracking-wider">Best</p>
+                            <p id="best-score" class="text-white text-4xl font-bold drop-shadow-md pixel-font">0</p>
+                        </div>
+                    </div>
+                    
+                    <div class="border-t-2 border-[#cbb968] my-2"></div>
+                    
+                    <!-- Medal Display -->
+                    <div class="flex justify-center items-center mt-4 h-20">
+                        <div id="medal" class="hidden relative group">
+                            <div id="medal-icon" class="w-16 h-16 rounded-full shadow-inner border-4 border-white/40 flex items-center justify-center text-4xl transform group-hover:scale-110 transition">🥇</div>
+                            <div id="medal-shine" class="absolute inset-0 rounded-full bg-gradient-to-tr from-transparent via-white/30 to-transparent opacity-0 animate-pulse"></div>
+                        </div>
+                        <p id="no-medal" class="text-[#cbb968] text-sm italic font-bold">No Medal Earned</p>
+                    </div>
+                </div>
+
+                <button id="restart-btn" class="bg-gradient-to-b from-sky-400 to-sky-600 hover:from-sky-500 hover:to-sky-700 text-white font-bold py-3 px-10 rounded-full text-2xl transition shadow-lg border-b-4 border-sky-800 active:border-b-0 active:translate-y-1">
+                    RETRY
+                </button>
+            </div>
+
+            <!-- Settings Modal -->
+            <div id="settings-modal" class="absolute inset-0 flex items-center justify-center bg-black/80 pointer-events-auto hidden z-50 backdrop-blur-md transition-opacity duration-200">
+                <div class="bg-gray-900/95 p-6 rounded-2xl shadow-2xl w-80 border border-gray-700 text-white font-sans relative overflow-hidden max-h-[85vh] flex flex-col">
+                    <div class="absolute inset-0 bg-gradient-to-br from-green-900/20 to-purple-900/20 pointer-events-none"></div>
+                    
+                    <div class="relative z-10 flex-1 overflow-y-auto custom-scroll pr-2">
+                        <h2 class="text-2xl font-bold mb-4 text-center text-green-400 font-mono tracking-widest border-b border-gray-700 pb-2 sticky top-0 bg-gray-900/95 z-20">HACK MENU</h2>
+                        
+                        <div class="space-y-6 pb-4">
+                            
+                            <!-- Theme Toggle -->
+                            <div class="flex items-center justify-between p-2 bg-gray-800/50 rounded-lg">
+                                <div class="flex items-center gap-2">
+                                    <span id="theme-icon">☀️</span>
+                                    <label class="font-bold text-gray-200">Night Mode</label>
+                                </div>
+                                <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                    <input type="checkbox" id="setting-theme" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out checked:translate-x-6 checked:bg-indigo-500 border-gray-600 checked:border-indigo-500"/>
+                                    <label for="setting-theme" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-700 cursor-pointer"></label>
+                                </div>
+                            </div>
+
+                            <!-- Auto Pilot -->
+                            <div class="flex items-center justify-between group">
+                                <div>
+                                    <label class="font-bold text-gray-200 group-hover:text-white transition">Auto Pilot</label>
+                                    <p class="text-xs text-gray-500">AI Bot Mode</p>
+                                </div>
+                                <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                    <input type="checkbox" id="hack-autopilot" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out checked:translate-x-6 checked:bg-green-500 border-gray-600 checked:border-green-500"/>
+                                    <label for="hack-autopilot" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-700 cursor-pointer"></label>
+                                </div>
+                            </div>
+
+                            <!-- God Mode -->
+                            <div class="flex items-center justify-between group">
+                                <div>
+                                    <label class="font-bold text-gray-200 group-hover:text-white transition">God Mode</label>
+                                    <p class="text-xs text-gray-500">Invincibility</p>
+                                </div>
+                                <div class="relative inline-block w-12 h-6 align-middle select-none">
+                                    <input type="checkbox" id="hack-godmode" class="toggle-checkbox absolute block w-6 h-6 rounded-full bg-white border-4 appearance-none cursor-pointer transition-transform duration-200 ease-in-out checked:translate-x-6 checked:bg-yellow-500 border-gray-600 checked:border-yellow-500"/>
+                                    <label for="hack-godmode" class="toggle-label block overflow-hidden h-6 rounded-full bg-gray-700 cursor-pointer"></label>
+                                </div>
+                            </div>
+
+                            <!-- Game Speed -->
+                            <div class="bg-gray-800/50 p-3 rounded-lg">
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="font-bold text-gray-200 text-sm">Game Speed</label>
+                                    <span id="speed-val" class="font-mono text-cyan-400 text-xs">1x</span>
+                                </div>
+                                <input type="range" id="hack-speed" min="1" max="50" value="1" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-cyan-500 mb-2">
+                                <input type="number" id="hack-speed-input" class="w-full bg-gray-900 border border-gray-600 p-1 rounded text-center text-green-400 font-mono text-sm focus:outline-none focus:border-green-500 transition" placeholder="Custom Value">
+                            </div>
+
+                            <!-- Gravity Control -->
+                            <div class="bg-gray-800/50 p-3 rounded-lg">
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="font-bold text-gray-200 text-sm">Gravity</label>
+                                    <span id="gravity-val" class="font-mono text-pink-400 text-xs">Normal</span>
+                                </div>
+                                <input type="range" id="hack-gravity" min="5" max="100" value="25" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-pink-500">
+                            </div>
+
+                            <!-- Pipe Gap Control -->
+                            <div class="bg-gray-800/50 p-3 rounded-lg">
+                                <div class="flex items-center justify-between mb-1">
+                                    <label class="font-bold text-gray-200 text-sm">Pipe Gap</label>
+                                    <span id="gap-val" class="font-mono text-orange-400 text-xs">Normal</span>
+                                </div>
+                                <input type="range" id="hack-gap" min="80" max="250" value="120" class="w-full h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer accent-orange-500">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="close-settings" class="mt-4 w-full bg-red-600 hover:bg-red-700 text-white py-3 rounded-lg font-bold tracking-wider shadow-lg transition transform active:scale-95">
+                        CLOSE (ESC)
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Game Constants & Variables ---
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('game-container');
+        
+        // UI Elements
+        const startScreen = document.getElementById('start-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        const scoreDisplay = document.getElementById('score-display');
+        const finalScoreEl = document.getElementById('final-score');
+        const bestScoreEl = document.getElementById('best-score');
+        const medalEl = document.getElementById('medal');
+        const medalIcon = document.getElementById('medal-icon');
+        const noMedalText = document.getElementById('no-medal');
+        
+        // Buttons
+        const startBtn = document.getElementById('start-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const settingsBtn = document.getElementById('settings-btn');
+        const closeSettingsBtn = document.getElementById('close-settings');
+        
+        // Modal Elements
+        const settingsModal = document.getElementById('settings-modal');
+        const hackAutopilot = document.getElementById('hack-autopilot');
+        const hackGodmode = document.getElementById('hack-godmode');
+        const hackSpeed = document.getElementById('hack-speed');
+        const hackSpeedInput = document.getElementById('hack-speed-input');
+        const speedVal = document.getElementById('speed-val');
+        const settingTheme = document.getElementById('setting-theme');
+        const themeIcon = document.getElementById('theme-icon');
+        
+        const hackGravity = document.getElementById('hack-gravity');
+        const gravityVal = document.getElementById('gravity-val');
+        const hackGap = document.getElementById('hack-gap');
+        const gapVal = document.getElementById('gap-val');
+
+        // Game State
+        let frames = 0;
+        let score = 0;
+        let highScore = localStorage.getItem('flappyHighScore') || 0;
+        let gameState = 'START'; // START, PLAYING, GAMEOVER
+        let baseSpeed = 2;
+        let theme = 'day'; // 'day' or 'night'
+
+        // Settings / Hacks
+        const hacks = {
+            autoPilot: false,
+            godMode: false,
+            speedMultiplier: 1,
+            customSpeed: null,
+            gravity: 0.25,
+            gap: 120
+        };
+
+        // Audio Context
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        
+        function playSound(type) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            const now = audioCtx.currentTime;
+            
+            if (type === 'jump') {
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(400, now);
+                osc.frequency.linearRampToValueAtTime(600, now + 0.1);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'score') {
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(1000, now);
+                gain.gain.setValueAtTime(0.1, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.start(now);
+                osc.stop(now + 0.1);
+            } else if (type === 'hit') {
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(200, now);
+                osc.frequency.linearRampToValueAtTime(50, now + 0.2);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                osc.start(now);
+                osc.stop(now + 0.3);
+            }
+        }
+
+        // --- Particle System ---
+        const particles = [];
+        class Particle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 5 + 2;
+                this.speedX = Math.random() * 2 - 1; // Random X spread
+                this.speedY = Math.random() * 2 - 1; // Random Y spread
+                this.color = `rgba(255, 255, 255, ${Math.random() * 0.5 + 0.5})`;
+                this.life = 1.0; // Opacity/Life
+            }
+            update() {
+                this.x -= (baseSpeed * (hacks.customSpeed || hacks.speedMultiplier)) + this.speedX; // Move with world + own speed
+                this.y += this.speedY;
+                this.life -= 0.03;
+                this.size *= 0.95;
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.globalAlpha = this.life;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            }
+        }
+
+        function handleParticles() {
+            for (let i = 0; i < particles.length; i++) {
+                particles[i].update();
+                particles[i].draw();
+                if (particles[i].life <= 0 || particles[i].size <= 0.5) {
+                    particles.splice(i, 1);
+                    i--;
+                }
+            }
+        }
+
+        // --- Game Objects ---
+
+        const bird = {
+            x: 50,
+            y: 150,
+            radius: 12,
+            speed: 0,
+            jump: 4.6,
+            rotation: 0,
+            
+            draw: function() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                this.rotation = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (this.speed * 0.1)));
+                ctx.rotate(this.rotation);
+                
+                // Body
+                ctx.fillStyle = '#FFD700';
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Eye
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath();
+                ctx.arc(6, -6, 5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+                ctx.fillStyle = '#000';
+                ctx.beginPath();
+                ctx.arc(8, -6, 2, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Wing
+                ctx.fillStyle = '#FFF';
+                ctx.beginPath();
+                ctx.ellipse(-6, 4, 8, 5, 0.2, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                // Beak
+                ctx.fillStyle = '#FFA500';
+                ctx.beginPath();
+                ctx.moveTo(8, 2);
+                ctx.lineTo(16, 6);
+                ctx.lineTo(8, 10);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.restore();
+            },
+            
+            update: function() {
+                const currentSpeedMultiplier = hacks.customSpeed || hacks.speedMultiplier;
+
+                // Auto Pilot
+                if (hacks.autoPilot && gameState === 'PLAYING') {
+                    let closestPipe = null;
+                    for(let p of pipes.position) {
+                        if (p.x + pipes.w > this.x - this.radius) {
+                            closestPipe = p;
+                            break;
+                        }
+                    }
+
+                    if (closestPipe) {
+                        const targetY = closestPipe.y + hacks.gap / 2;
+                        if (this.y > targetY + 15) { 
+                            this.flap();
+                        }
+                    } else {
+                        if (this.y > canvas.height - fg.h - 100) {
+                            this.flap();
+                        }
+                    }
+                }
+
+                // Physics with hacks
+                // Adjust gravity effect based on speed multiplier to keep game playable at high speeds? 
+                // No, standard behavior is cleaner for "speed hack" feeling.
+                // But we must scale gravity if we want the physics to look right at higher frame advancements?
+                // Simplest is just adding gravity per frame.
+                
+                this.speed += hacks.gravity;
+                this.y += this.speed;
+
+                // Floor Collision
+                if (this.y + this.radius >= canvas.height - fg.h) {
+                    this.y = canvas.height - fg.h - this.radius;
+                    if (!hacks.godMode) endGame();
+                    else {
+                        this.speed = -this.jump; // Bounce
+                        // Add particles on bounce
+                        for(let i=0; i<5; i++) particles.push(new Particle(this.x, this.y + this.radius));
+                    }
+                }
+                
+                // Ceiling Collision
+                if (this.y - this.radius <= 0) {
+                    this.y = this.radius;
+                    this.speed = 0;
+                }
+            },
+            
+            flap: function() {
+                this.speed = -this.jump;
+                playSound('jump');
+                // Add particles on flap
+                for(let i=0; i<3; i++) particles.push(new Particle(this.x - 5, this.y));
+            },
+
+            reset: function() {
+                this.y = 150;
+                this.speed = 0;
+                this.rotation = 0;
+            }
+        };
+
+        const bg = {
+            stars: [],
+            initStars: function() {
+                this.stars = [];
+                for(let i=0; i<50; i++) {
+                    this.stars.push({
+                        x: Math.random() * canvas.width,
+                        y: Math.random() * (canvas.height - fg.h),
+                        size: Math.random() * 2,
+                        alpha: Math.random()
+                    });
+                }
+            },
+            draw: function() {
+                // Theme Background
+                if (theme === 'day') {
+                    ctx.fillStyle = '#70c5ce';
+                    container.style.backgroundColor = '#70c5ce';
+                } else {
+                    ctx.fillStyle = '#001133';
+                    container.style.backgroundColor = '#001133';
+                }
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // Stars for night mode
+                if (theme === 'night') {
+                    ctx.fillStyle = '#FFF';
+                    this.stars.forEach(star => {
+                        ctx.globalAlpha = star.alpha;
+                        ctx.beginPath();
+                        ctx.arc(star.x, star.y, star.size, 0, Math.PI*2);
+                        ctx.fill();
+                    });
+                    ctx.globalAlpha = 1.0;
+                }
+
+                // Clouds
+                ctx.fillStyle = theme === 'day' ? 'rgba(255, 255, 255, 0.5)' : 'rgba(255, 255, 255, 0.1)';
+                const cloudSpeed = 0.5 * (hacks.customSpeed || hacks.speedMultiplier);
+                
+                // Simple cloud shapes moving
+                const offset1 = (frames * cloudSpeed) % (canvas.width + 200);
+                const offset2 = (frames * cloudSpeed * 0.6) % (canvas.width + 200);
+
+                // Cloud 1
+                ctx.beginPath();
+                ctx.arc(100 - offset1, canvas.height - 150, 30, 0, Math.PI * 2);
+                ctx.arc(140 - offset1, canvas.height - 160, 40, 0, Math.PI * 2);
+                ctx.arc(180 - offset1, canvas.height - 150, 30, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Cloud 2
+                ctx.beginPath();
+                ctx.arc(300 - offset2, canvas.height - 250, 25, 0, Math.PI * 2);
+                ctx.arc(340 - offset2, canvas.height - 270, 35, 0, Math.PI * 2);
+                ctx.arc(380 - offset2, canvas.height - 250, 25, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Cityscape
+                ctx.fillStyle = theme === 'day' ? '#a3e0c3' : '#1a3a3a';
+                const citySpeed = 0.2 * (hacks.customSpeed || hacks.speedMultiplier);
+                const cityOffset = (frames * citySpeed) % 100;
+                // Simple procedural city
+                for(let i=0; i<canvas.width/40 + 2; i++) {
+                    let h = 30 + Math.sin(i * 132) * 20;
+                    ctx.fillRect(i * 40 - cityOffset, canvas.height - fg.h - h, 42, h);
+                }
+            }
+        };
+
+        const fg = {
+            h: 112,
+            x: 0,
+            draw: function() {
+                ctx.fillStyle = theme === 'day' ? '#ded895' : '#4a452a';
+                ctx.fillRect(0, canvas.height - this.h, canvas.width, this.h);
+                
+                ctx.fillStyle = theme === 'day' ? '#73bf2e' : '#2e5f15';
+                ctx.fillRect(0, canvas.height - this.h, canvas.width, 12);
+                
+                ctx.strokeStyle = theme === 'day' ? '#5da62b' : '#1f3f0e';
+                ctx.beginPath();
+                ctx.moveTo(0, canvas.height - this.h + 12);
+                ctx.lineTo(canvas.width, canvas.height - this.h + 12);
+                ctx.stroke();
+
+                ctx.strokeStyle = theme === 'day' ? '#cbb968' : '#3a3520';
+                ctx.lineWidth = 2;
+                const patternWidth = 20;
+                
+                const currentSpeed = baseSpeed * (hacks.customSpeed || hacks.speedMultiplier);
+                if (gameState === 'PLAYING') {
+                    this.x = (this.x - currentSpeed) % patternWidth;
+                }
+                
+                for (let i = this.x; i < canvas.width; i += patternWidth) {
+                    ctx.beginPath();
+                    ctx.moveTo(i, canvas.height - this.h + 12);
+                    ctx.lineTo(i - 10, canvas.height);
+                    ctx.stroke();
+                }
+            }
+        };
+
+        const pipes = {
+            position: [],
+            w: 52,
+            
+            draw: function() {
+                for(let i = 0; i < this.position.length; i++) {
+                    let p = this.position[i];
+                    let topY = p.y;
+                    let bottomY = p.y + hacks.gap;
+                    
+                    ctx.fillStyle = theme === 'day' ? '#73bf2e' : '#2e5f15';
+                    ctx.strokeStyle = theme === 'day' ? '#553c1f' : '#221100';
+                    ctx.lineWidth = 2;
+
+                    // Top Pipe
+                    ctx.fillRect(p.x, 0, this.w, topY);
+                    ctx.strokeRect(p.x, -2, this.w, topY + 2);
+                    ctx.fillRect(p.x - 2, topY - 24, this.w + 4, 24);
+                    ctx.strokeRect(p.x - 2, topY - 24, this.w + 4, 24);
+
+                    // Bottom Pipe
+                    ctx.fillRect(p.x, bottomY, this.w, canvas.height - bottomY - fg.h);
+                    ctx.strokeRect(p.x, bottomY, this.w, canvas.height - bottomY - fg.h);
+                    ctx.fillRect(p.x - 2, bottomY, this.w + 4, 24);
+                    ctx.strokeRect(p.x - 2, bottomY, this.w + 4, 24);
+                    
+                    // Highlights
+                    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+                    ctx.fillRect(p.x + 4, 0, 4, topY - 24);
+                    ctx.fillRect(p.x + 4, bottomY + 24, 4, canvas.height - bottomY - fg.h);
+                }
+            },
+            
+            update: function() {
+                const currentSpeed = baseSpeed * (hacks.customSpeed || hacks.speedMultiplier);
+                
+                // Spawn Logic: Scale frequency with speed to keep distance consistent
+                // Distance between pipes approx 200px
+                if(frames % Math.max(1, Math.floor(100 / (hacks.customSpeed || hacks.speedMultiplier))) === 0) {
+                    const minPipe = 50;
+                    const maxPos = canvas.height - fg.h - minPipe - hacks.gap;
+                    
+                    // Ensure we don't spawn impossible pipes if gap is too big/small for screen
+                    if (maxPos > minPipe) {
+                        this.position.push({
+                            x: canvas.width,
+                            y: Math.floor(Math.random() * (maxPos - minPipe + 1) + minPipe),
+                            passed: false
+                        });
+                    } else {
+                         // Fallback center spawn
+                         this.position.push({
+                            x: canvas.width,
+                            y: (canvas.height - fg.h) / 2 - (hacks.gap/2),
+                            passed: false
+                        });
+                    }
+                }
+                
+                for(let i = 0; i < this.position.length; i++) {
+                    let p = this.position[i];
+                    p.x -= currentSpeed;
+                    
+                    // Collision
+                    if(bird.x + bird.radius > p.x && bird.x - bird.radius < p.x + this.w) {
+                        if(bird.y - bird.radius < p.y || bird.y + bird.radius > p.y + hacks.gap) {
+                            if (!hacks.godMode) endGame();
+                        }
+                    }
+                    
+                    // Score
+                    if(p.x + this.w < bird.x && !p.passed) {
+                        score++;
+                        p.passed = true;
+                        scoreDisplay.innerText = score;
+                        playSound('score');
+                    }
+                    
+                    // Remove
+                    if(p.x + this.w <= 0) {
+                        this.position.shift();
+                        i--;
+                    }
+                }
+            },
+
+            reset: function() {
+                this.position = [];
+            }
+        };
+
+        // --- Engine ---
+
+        function resize() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            bg.initStars();
+            
+            if(gameState === 'START') {
+                bird.x = canvas.width / 2 - 50;
+                bird.y = canvas.height / 2;
+            } else {
+                bird.x = 50;
+            }
+        }
+        
+        window.addEventListener('resize', resize);
+        resize();
+
+        function loop() {
+            if (gameState === 'PLAYING') {
+                bird.update();
+                pipes.update();
+                handleParticles();
+                frames++;
+            } else {
+                // Still animate background slowly in menu
+                frames++; 
+            }
+
+            bg.draw();
+            pipes.draw();
+            handleParticles(); // Draw particles even if not playing (e.g. game over particles)
+            fg.draw();
+            bird.draw();
+            
+            requestAnimationFrame(loop);
+        }
+
+        loop();
+
+        // --- Control Logic ---
+
+        function startGame() {
+            if (gameState === 'PLAYING') return;
+            gameState = 'PLAYING';
+            score = 0;
+            frames = 0;
+            scoreDisplay.innerText = score;
+            scoreDisplay.classList.remove('hidden');
+            startScreen.style.display = 'none';
+            gameOverScreen.classList.add('hidden');
+            gameOverScreen.classList.remove('flex');
+            gameOverScreen.style.opacity = '0';
+            
+            bird.reset();
+            bird.x = 50;
+            pipes.reset();
+            particles.length = 0; // clear particles
+            bird.flap();
+        }
+
+        function endGame() {
+            if(gameState === 'GAMEOVER') return;
+            
+            gameState = 'GAMEOVER';
+            playSound('hit');
+            
+            if(score > highScore) {
+                highScore = score;
+                localStorage.setItem('flappyHighScore', highScore);
+            }
+
+            scoreDisplay.classList.add('hidden');
+            finalScoreEl.innerText = score;
+            bestScoreEl.innerText = highScore;
+            
+            // Medal Logic
+            medalEl.classList.add('hidden');
+            noMedalText.classList.add('hidden');
+            
+            if(score >= 10) {
+                medalEl.classList.remove('hidden');
+                if(score >= 40) {
+                    medalIcon.innerHTML = '🥇'; // Gold
+                    medalIcon.style.borderColor = '#DAA520';
+                    medalIcon.style.background = 'linear-gradient(135deg, #FFD700, #FDB931)';
+                } else if(score >= 20) {
+                    medalIcon.innerHTML = '🥈'; // Silver
+                    medalIcon.style.borderColor = '#C0C0C0';
+                    medalIcon.style.background = 'linear-gradient(135deg, #E0E0E0, #B0B0B0)';
+                } else {
+                    medalIcon.innerHTML = '🥉'; // Bronze
+                    medalIcon.style.borderColor = '#CD7F32';
+                    medalIcon.style.background = 'linear-gradient(135deg, #CD7F32, #A0522D)';
+                }
+            } else {
+                noMedalText.classList.remove('hidden');
+            }
+
+            gameOverScreen.classList.remove('hidden');
+            gameOverScreen.classList.add('flex');
+            setTimeout(() => {
+                gameOverScreen.style.opacity = '1';
+            }, 10);
+        }
+
+        function inputAction(e) {
+            // Ignore input if settings modal is open
+            if (!settingsModal.classList.contains('hidden')) return;
+
+            if(e.type === 'keydown' && e.code !== 'Space') return;
+            if(e.type === 'keydown') e.preventDefault();
+
+            switch(gameState) {
+                case 'START':
+                    startGame();
+                    break;
+                case 'PLAYING':
+                    bird.flap();
+                    break;
+                case 'GAMEOVER':
+                    // Don't restart immediately to prevent accidental clicks
+                    // Handled by button
+                    break;
+            }
+        }
+
+        // --- Hack Event Listeners ---
+        
+        function toggleSettings() {
+            if (settingsModal.classList.contains('hidden')) {
+                settingsModal.classList.remove('hidden');
+            } else {
+                settingsModal.classList.add('hidden');
+                canvas.focus();
+            }
+        }
+
+        settingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleSettings();
+        });
+
+        closeSettingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            toggleSettings();
+        });
+
+        // Hacks
+        hackAutopilot.addEventListener('change', (e) => {
+            hacks.autoPilot = e.target.checked;
+        });
+
+        hackGodmode.addEventListener('change', (e) => {
+            hacks.godMode = e.target.checked;
+        });
+
+        // Theme
+        settingTheme.addEventListener('change', (e) => {
+            theme = e.target.checked ? 'night' : 'day';
+            themeIcon.innerText = theme === 'night' ? '🌙' : '☀️';
+        });
+
+        // Speed
+        hackSpeed.addEventListener('input', (e) => {
+            hacks.speedMultiplier = parseFloat(e.target.value);
+            speedVal.innerText = hacks.speedMultiplier + 'x';
+            hackSpeedInput.value = "";
+            hacks.customSpeed = null;
+        });
+
+        hackSpeedInput.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if(!isNaN(val) && val > 0) {
+                hacks.customSpeed = val;
+                speedVal.innerText = val + 'x';
+            } else {
+                hacks.customSpeed = null;
+                speedVal.innerText = hacks.speedMultiplier + 'x';
+            }
+        });
+        
+        // Gravity
+        hackGravity.addEventListener('input', (e) => {
+            hacks.gravity = parseInt(e.target.value) / 100;
+            let label = "Normal";
+            if(hacks.gravity < 0.15) label = "Moon";
+            if(hacks.gravity > 0.4) label = "Heavy";
+            if(hacks.gravity > 0.8) label = "Black Hole";
+            gravityVal.innerText = label + ` (${hacks.gravity})`;
+        });
+
+        // Gap
+        hackGap.addEventListener('input', (e) => {
+            hacks.gap = parseInt(e.target.value);
+            let label = "Normal";
+            if(hacks.gap < 100) label = "Tiny";
+            if(hacks.gap > 150) label = "Huge";
+            if(hacks.gap > 200) label = "Massive";
+            gapVal.innerText = label + ` (${hacks.gap}px)`;
+        });
+
+        // Prevent clicks inside modal from propagating
+        settingsModal.addEventListener('click', (e) => e.stopPropagation());
+        settingsModal.addEventListener('mousedown', (e) => e.stopPropagation());
+        settingsModal.addEventListener('touchstart', (e) => e.stopPropagation(), {passive: false});
+
+        // Global Inputs
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' || e.code === 'KeyP') {
+                toggleSettings();
+            } else {
+                inputAction(e);
+            }
+        });
+        
+        canvas.addEventListener('touchstart', (e) => { e.preventDefault(); inputAction(e); }, {passive: false});
+        canvas.addEventListener('mousedown', inputAction);
+
+        startBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startGame();
+        });
+
+        restartBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            startGame();
+        });
+
+    </script>
+</body>
+</html>
