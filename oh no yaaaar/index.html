@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Prompt to Code (Stream)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden; /* Prevent body scroll, handle in containers */
+        }
+        
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+
+        .code-editor {
+            font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+            line-height: 1.5;
+            tab-size: 4;
+        }
+
+        .typing-cursor::after {
+            content: '▋';
+            animation: blink 1s step-start infinite;
+            color: #38bdf8;
+        }
+
+        @keyframes blink {
+            50% { opacity: 0; }
+        }
+
+        /* Loader */
+        .loader {
+            border: 3px solid rgba(255,255,255,0.1);
+            border-radius: 50%;
+            border-top: 3px solid #38bdf8;
+            width: 20px;
+            height: 20px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="h-14 border-b border-slate-700 flex items-center justify-between px-6 bg-slate-900/80">
+        <div class="flex items-center gap-3">
+            <i class="fa-solid fa-robot text-sky-400 text-xl"></i>
+            <h1 class="font-bold text-lg tracking-wide text-white">AI Code Architect <span class="text-xs text-slate-400 font-normal ml-2">v1.0 (Streaming)</span></h1>
+        </div>
+        
+        <div class="flex gap-4 items-center">
+            <div class="relative group">
+                <input type="password" id="apiKeyInput" placeholder="OpenRouter API Key" 
+                    class="bg-slate-800 text-xs text-slate-300 px-3 py-1.5 rounded border border-slate-600 focus:border-sky-500 outline-none w-48 transition-all"
+                    value="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">
+                <div class="absolute right-0 top-full mt-1 w-64 p-2 bg-black text-xs rounded hidden group-hover:block z-50 border border-slate-700">
+                    Default key loaded. Change if needed.
+                </div>
+            </div>
+            <button onclick="runCodeManual()" class="bg-green-600 hover:bg-green-700 text-white text-xs px-3 py-1.5 rounded transition-colors flex items-center gap-2">
+                <i class="fa-solid fa-play"></i> Run Again
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Layout -->
+    <div class="flex-1 flex overflow-hidden">
+        
+        <!-- Left Side: Input & Code View -->
+        <div class="w-1/2 flex flex-col border-r border-slate-700">
+            
+            <!-- Chat Input Area -->
+            <div class="p-4 bg-slate-800/50 border-b border-slate-700">
+                <label class="block text-sky-400 text-sm font-semibold mb-2">
+                    <i class="fa-solid fa-wand-magic-sparkles mr-1"></i> Kya banana hai? (Prompt)
+                </label>
+                <div class="relative">
+                    <textarea id="userPrompt" 
+                        class="w-full h-24 bg-slate-900 text-slate-200 p-3 rounded-lg border border-slate-600 focus:border-sky-500 focus:ring-1 focus:ring-sky-500 outline-none resize-none text-sm shadow-inner"
+                        placeholder="Example: Ek login page banao jisme floating particles background ho aur glassmorphism effect ho..."></textarea>
+                    <button id="generateBtn" onclick="generateCode()" 
+                        class="absolute bottom-3 right-3 bg-sky-600 hover:bg-sky-700 text-white px-4 py-1.5 rounded-md text-sm font-medium transition-all shadow-lg flex items-center gap-2">
+                        <span>Generate</span> <i class="fa-solid fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Code Editor Area -->
+            <div class="flex-1 flex flex-col min-h-0 bg-[#1e1e1e]">
+                <div class="flex justify-between items-center px-4 py-2 bg-[#252526] border-b border-[#3e3e42] text-xs">
+                    <span class="text-slate-300 font-mono">generated_code.html</span>
+                    <div class="flex gap-2">
+                        <button onclick="copyToClipboard()" class="text-slate-400 hover:text-white" title="Copy Code">
+                            <i class="fa-regular fa-copy"></i>
+                        </button>
+                        <span id="statusIndicator" class="text-slate-500 italic hidden">
+                            <div class="loader mr-1"></div> Generating...
+                        </span>
+                    </div>
+                </div>
+                <div class="flex-1 overflow-auto p-4 relative">
+                    <pre class="code-editor text-sm m-0"><code id="codeOutput" class="language-html text-green-400"></code><span id="cursor" class="typing-cursor hidden"></span></pre>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Live Preview -->
+        <div class="w-1/2 flex flex-col bg-white">
+            <div class="bg-slate-100 border-b border-slate-300 px-4 py-2 flex justify-between items-center">
+                <span class="text-slate-600 text-xs font-bold uppercase tracking-wider"><i class="fa-solid fa-desktop mr-1"></i> Live Preview</span>
+                <div class="flex gap-1">
+                    <div class="w-2 h-2 rounded-full bg-red-400"></div>
+                    <div class="w-2 h-2 rounded-full bg-yellow-400"></div>
+                    <div class="w-2 h-2 rounded-full bg-green-400"></div>
+                </div>
+            </div>
+            <div class="flex-1 relative bg-white bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyMCIgaGVpZ2h0PSIyMCIgb3BhY2l0eT0iMC4wNSI+PHJlY3QgeD0iMCIgeT0iMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiLz48L3N2Zz4=')]">
+                <iframe id="previewFrame" class="w-full h-full border-none" sandbox="allow-scripts allow-modals allow-forms allow-popups allow-same-origin"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API Configuration
+        const MODEL_NAME = "kwaipilot/kat-coder-pro:free";
+        const OPENROUTER_URL = "https://openrouter.ai/api/v1/chat/completions";
+        
+        // DOM Elements
+        const promptInput = document.getElementById('userPrompt');
+        const generateBtn = document.getElementById('generateBtn');
+        const codeOutput = document.getElementById('codeOutput');
+        const previewFrame = document.getElementById('previewFrame');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const cursor = document.getElementById('cursor');
+        const apiKeyInput = document.getElementById('apiKeyInput');
+
+        let accumulatedCode = "";
+        let abortController = null;
+
+        // System Prompt to enforce single file HTML
+        const SYSTEM_PROMPT = `You are an expert Frontend Developer. 
+        Your task is to write complete, production-ready web code based on the user's prompt.
+        RULES:
+        1. Output ONLY a single HTML file containing all CSS (in <style>) and JavaScript (in <script>).
+        2. Do NOT use external CSS/JS files. Use CDNs only for libraries (Tailwind, FontAwesome, Three.js etc) if needed.
+        3. Make the design modern, responsive, and visually stunning.
+        4. Do NOT output markdown backticks (like \`\`\`html). Just raw code.
+        5. If using Tailwind, use the script tag: <script src="https://cdn.tailwindcss.com"><\/script>
+        6. Start directly with <!DOCTYPE html>.`;
+
+        async function generateCode() {
+            const prompt = promptInput.value.trim();
+            const apiKey = apiKeyInput.value.trim();
+
+            if (!prompt) {
+                alert("Please enter a prompt!");
+                return;
+            }
+            if (!apiKey) {
+                alert("API Key is missing!");
+                return;
+            }
+
+            // Reset UI
+            accumulatedCode = "";
+            codeOutput.textContent = "";
+            statusIndicator.classList.remove('hidden');
+            cursor.classList.remove('hidden');
+            generateBtn.disabled = true;
+            generateBtn.classList.add('opacity-50', 'cursor-not-allowed');
+
+            if (abortController) abortController.abort();
+            abortController = new AbortController();
+
+            try {
+                const response = await fetch(OPENROUTER_URL, {
+                    method: "POST",
+                    headers: {
+                        "Authorization": `Bearer ${apiKey}`,
+                        "HTTP-Referer": window.location.href,
+                        "X-Title": "AI Code Generator",
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        "model": MODEL_NAME,
+                        "messages": [
+                            {"role": "system", "content": SYSTEM_PROMPT},
+                            {"role": "user", "content": prompt}
+                        ],
+                        "stream": true, // Enable streaming
+                        "max_tokens": 8000 // High token limit for complete code
+                    }),
+                    signal: abortController.signal
+                });
+
+                if (!response.ok) throw new Error(`API Error: ${response.status}`);
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder("utf-8");
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    const chunk = decoder.decode(value, { stream: true });
+                    const lines = chunk.split('\n');
+
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6);
+                            if (data === '[DONE]') break;
+
+                            try {
+                                const parsed = JSON.parse(data);
+                                const content = parsed.choices[0]?.delta?.content || "";
+                                
+                                if (content) {
+                                    // Append text to code view
+                                    accumulatedCode += content;
+                                    
+                                    // Remove markdown backticks if model accidentally adds them
+                                    let cleanDisplay = accumulatedCode.replace(/```html|```/g, "");
+                                    
+                                    codeOutput.textContent = cleanDisplay;
+                                    
+                                    // Auto-scroll to bottom of code
+                                    const codeContainer = document.querySelector('.flex-1.overflow-auto');
+                                    codeContainer.scrollTop = codeContainer.scrollHeight;
+                                }
+                            } catch (e) {
+                                console.error("JSON Parse error", e);
+                            }
+                        }
+                    }
+                }
+
+                // Final Cleanup & Render
+                renderPreview(accumulatedCode);
+
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    console.log('Generation stopped.');
+                } else {
+                    codeOutput.textContent += `\n\n[Error: ${error.message}]`;
+                }
+            } finally {
+                statusIndicator.classList.add('hidden');
+                cursor.classList.add('hidden');
+                generateBtn.disabled = false;
+                generateBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            }
+        }
+
+        function renderPreview(code) {
+            // Remove markdown formatting if present for the execution
+            let cleanCode = code.replace(/```html/g, "").replace(/```/g, "");
+            
+            const blob = new Blob([cleanCode], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            previewFrame.src = url;
+        }
+
+        function runCodeManual() {
+            if(codeOutput.textContent) {
+                renderPreview(codeOutput.textContent);
+            }
+        }
+
+        function copyToClipboard() {
+            navigator.clipboard.writeText(codeOutput.textContent).then(() => {
+                const btn = document.querySelector('.fa-copy');
+                btn.classList.replace('fa-copy', 'fa-check');
+                setTimeout(() => btn.classList.replace('fa-check', 'fa-copy'), 2000);
+            });
+        }
+
+        // Allow Ctrl+Enter to submit
+        promptInput.addEventListener('keydown', (e) => {
+            if (e.ctrlKey && e.key === 'Enter') {
+                generateCode();
+            }
+        });
+    </script>
+
+    <a href="https://runanddeploy.com" target="_blank" class="runanddeploy-watermark">
+      RunAndDeploy
+    </a>
+  </body>
+</html>
