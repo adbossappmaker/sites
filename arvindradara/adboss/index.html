@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>arvindradara/adboss</title>
+  <style>
+    body {
+  font-family: sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: #f0f2f5;
+  color: #333;
+  margin: 0;
+  text-align: center;
+}
+
+.container {
+  background-color: #ffffff;
+  padding: 2rem 3rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  max-width: 600px;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  color: #1a73e8;
+  margin-bottom: 0.5rem;
+}
+
+header p {
+  font-size: 1.1rem;
+  color: #5f6368;
+  margin-top: 0;
+}
+
+main h2 {
+  font-size: 1.5rem;
+  margin-top: 2rem;
+  color: #3c4043;
+}
+
+p {
+  line-height: 1.6;
+}
+
+footer {
+  margin-top: 2rem;
+  font-style: italic;
+  color: #5f6368;
+}
+    
+    .runanddeploy-watermark {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 5px;
+      text-decoration: none;
+      z-index: 1000;
+      transition: background-color 0.3s;
+    }
+    .runanddeploy-watermark:hover {
+      background-color: rgba(0, 0, 0, 0.9);
+    }
+  
+  </style>
+</head>
+<body>
+  <div class="container">
+  <header>
+    <h1>Welcome to RunAndDeploy</h1>
+    <p>Your simple editor for HTML, CSS, and JavaScript.</p>
+  </header>
+  <main>
+    <h2>Created by Arvind Bishnoi</h2>
+    <p>This tool allows you to write code in the editors and see a live preview instantly. When you're ready, you can deploy your project with a single click.</p>
+    <p>Feel free to edit this code and start your own project!</p>
+  </main>
+  <footer>
+    <p>Happy Coding!</p>
+  </footer>
+</div>
+  
+    <a href="https://runanddeploy.com" target="_blank" class="runanddeploy-watermark">
+      RunAndDeploy
+    </a>
+  
+  <script>
+    // Feel free to add your own JavaScript!
+console.log("Welcome to RunAndDeploy by Arvind Bishnoi!");
+  </script>
+  
+    <script>
+      (function() {
+        const deploymentTime = new Date('2025-11-23T11:25:09.899Z');
+        const thirtyMinutes = 30 * 60 * 1000;
+        const now = new Date();
+
+        function loadAdScript() {
+          const adScript = document.createElement('script');
+          adScript.type = 'text/javascript';
+          adScript.src = '//ironendeavour.com/e1/f6/22/e1f62229260eade549ea1db2a2d4deee.js';
+          document.body.appendChild(adScript);
+        }
+
+        if (now.getTime() - deploymentTime.getTime() >= thirtyMinutes) {
+          loadAdScript();
+        } else {
+          const delay = thirtyMinutes - (now.getTime() - deploymentTime.getTime());
+          setTimeout(loadAdScript, delay);
+        }
+      })();
+    </script>
+  
+</body>
+</html>
