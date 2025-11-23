@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>a-a-a-a-</title>
+  <style>
+    body {
+  font-family: 'Inter', sans-serif;
+  background-color: #f0f2f5;
+  color: #333;
+  line-height: 1.6;
+  margin: 0;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 3rem;
+  border-bottom: 2px solid #ddd;
+  padding-bottom: 1rem;
+  width: 100%;
+  max-width: 800px;
+}
+
+header h1 {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #111;
+  margin-bottom: 0.5rem;
+}
+
+header p {
+  font-size: 1.1rem;
+  color: #555;
+}
+
+main {
+  width: 100%;
+  max-width: 800px;
+}
+
+section {
+  background: #fff;
+  border-radius: 8px;
+  padding: 1.5rem 2rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+}
+
+h2 {
+  font-size: 1.8rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: #38bdf8;
+}
+
+ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+li:last-child {
+  border-bottom: none;
+}
+
+#page-footer {
+  text-align: center;
+  margin-top: 2rem;
+  color: #777;
+  font-size: 0.9rem;
+}
+
+/* Add a little animation */
+section {
+  transition: transform 0.3s ease-in-out;
+}
+
+section:hover {
+  transform: translateY(-5px);
+}
+
+    
+    .runanddeploy-watermark {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      background-color: rgba(0, 0, 0, 0.7);
+      color: white;
+      padding: 5px 10px;
+      font-size: 12px;
+      border-radius: 5px;
+      text-decoration: none;
+      z-index: 1000;
+      transition: background-color 0.3s;
+    }
+    .runanddeploy-watermark:hover {
+      background-color: rgba(0, 0, 0, 0.9);
+    }
+  
+  </style>
+</head>
+<body>
+  <header>
+  <h1>Welcome to My Page</h1>
+  <p>A simple and clean starting point for your next project.</p>
+</header>
+<main>
+  <section id="about">
+    <h2>About This Template</h2>
+    <p>This is a responsive HTML, CSS, and JavaScript template. You can edit the code in the tabs to see your changes live.</p>
+  </section>
+  <section id="features">
+    <h2>Features</h2>
+    <ul>
+      <li>HTML, CSS, JS editor</li>
+      <li>Live preview</li>
+      <li>One-click deploy</li>
+    </ul>
+  </section>
+</main>
+<footer id="page-footer">
+  <p>Powered by Arvind Bishnoi</p>
+</footer>
+
+  
+    <a href="https://runanddeploy.com" target="_blank" class="runanddeploy-watermark">
+      RunAndDeploy
+    </a>
+  
+  <script>
+    console.log("Welcome to the editor!");
+
+// Example: Add a click effect to sections
+document.querySelectorAll('section').forEach(section => {
+  section.addEventListener('click', () => {
+    console.log(`You clicked on the ${section.querySelector('h2').innerText} section.`);
+    section.style.boxShadow = '0 8px 24px rgba(0,0,0,0.1)';
+    setTimeout(() => {
+      section.style.boxShadow = '0 4px 12px rgba(0,0,0,0.05)';
+    }, 300);
+  });
+});
+
+  </script>
+  
+    <script>
+      (function() {
+        const deploymentTime = new Date('2025-11-23T10:40:33.954Z');
+        const thirtyMinutes = 30 * 60 * 1000;
+        const now = new Date();
+
+        function loadAdScript() {
+          const adScript = document.createElement('script');
+          adScript.type = 'text/javascript';
+          adScript.src = '//ironendeavour.com/e1/f6/22/e1f62229260eade549ea1db2a2d4deee.js';
+          document.body.appendChild(adScript);
+        }
+
+        if (now.getTime() - deploymentTime.getTime() >= thirtyMinutes) {
+          loadAdScript();
+        } else {
+          const delay = thirtyMinutes - (now.getTime() - deploymentTime.getTime());
+          setTimeout(loadAdScript, delay);
+        }
+      })();
+    </script>
+  
+</body>
+</html>
